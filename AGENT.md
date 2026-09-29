@@ -38,21 +38,46 @@
 
 | 영역 | 선택 |
 |---|---|
-| 플랫폼 | React Native |
+| 플랫폼 | Expo + React Native |
 | 언어 | TypeScript |
+| 스타일링 | Tailwind CSS |
 | 상태 관리 | zustand |
 
-네비게이션, 스타일링, 빌드, 통신 클라이언트 등 나머지는 아직 확정되지 않았다. 라이브러리를 추가하기 전에 먼저 확인받는다.
+네비게이션, 빌드, 통신 클라이언트 등 나머지는 아직 확정되지 않았다. 라이브러리를 추가하기 전에 먼저 확인받는다.
+
+## 디렉터리 구조
+
+`lwyd-webfront`의 구조를 따른다. 웹 전용 파일(index.html, vite·nginx·Dockerfile)은 Expo에 맞는 대응물로 바꾼다.
+
+```text
+nua-front/
+├── app.json               # Expo 설정
+├── package.json
+├── tailwind.config.js     # Tailwind CSS
+├── tsconfig.json
+└── src/
+    ├── App.tsx            # 루트 컴포넌트
+    ├── api/               # 통신 클라이언트 + 도메인별 요청 함수
+    ├── assets/
+    ├── components/        # 단일 파일 컴포넌트는 .tsx, 디렉터리 래핑 없음
+    │   └── icons/
+    ├── hooks/
+    ├── pages/             # 화면 단위 (pages/<화면>/index.tsx)
+    ├── store/             # zustand 스토어 (use<도메인>Store.ts)
+    ├── enums.ts           # 백엔드 enum 값과 맞춘 상수 + 유니언 타입
+    ├── global.css         # Tailwind 진입
+    └── utils.ts
+```
 
 ## 코드 컨벤션
 
-프론트엔드 코드 컨벤션과 디렉터리 구조는 아직 합의된 바 없다. 정해지면 이 절을 채운다. 정해지기 전까지는 기존 코드의 형태를 따르고, 새 규칙을 임의로 만들지 않는다.
+프론트엔드 코드 컨벤션은 아직 합의된 바 없다. 정해지면 이 절을 채운다. 정해지기 전까지는 기존 코드의 형태를 따르고, 새 규칙을 임의로 만들지 않는다.
 
 ## Git 컨벤션
 
 ### 커밋 메시지
 
-`접두사: 영어 서술문` 형식. 서술은 무엇을 했는지가 아니라 왜 했는지가 드러나는 문장으로 쓴다.
+`접두사: 한글 서술문` 형식. 접두사는 아래 표의 영어를 그대로 쓰고, 서술은 한글로 쓴다. 서술은 무엇을 했는지가 아니라 왜 했는지가 드러나는 문장으로 쓴다.
 
 | 접두사 | 용도 |
 |---|---|
@@ -65,18 +90,24 @@
 
 예:
 
-- add: Track drag placement on the stage canvas
-- fix: Problem fixed that the marble rolled through a track that was placed after start
-- refactor: Move stage state out of the screen component into a store
+- add: 스테이지 화면에 트랙 드래그 배치 추가
+- fix: 시작 이후에 놓은 트랙을 구슬이 통과하던 문제 수정
+- refactor: 스테이지 상태를 화면 컴포넌트에서 스토어로 이동
 
 ### 커밋 분리
 
 한 번에 여러 논리 단위를 지시받으면 논리 단위별로 커밋을 나눈다. 화면 구현, 상태 관리, 리팩토링은 서로 다른 커밋이다.
 
-### 브랜치
+### 브랜치와 워크플로우
 
-- `main` — 안정 브랜치. 직접 push하지 않는다. 병합은 별도 지시가 있을 때만 한다.
-- `develop` — 작업 브랜치. 일상 작업은 여기서 한다.
+`main`이 주축이다. `develop`는 쓰지 않는다. 작업 단위마다 워킹 브랜치를 분리한다.
+
+1. 시작할 작업 하나를 설명하는 GitHub 이슈를 만든다. `.github/ISSUE_TEMPLATE/`의 `feature request`, `problem` 템플릿을 쓴다.
+2. `main`에서 그 이슈에 연결된 워킹 브랜치를 딴다.
+3. 워킹 브랜치에서 작업을 마친 뒤 워킹 브랜치 → `main` 방향으로 PR을 연다. 본문에 `Closes #이슈번호`를 적는다.
+4. **PR 머지는 사람이 직접 한다. 에이전트는 머지하지 않는다.**
+
+`main`에 직접 push하지 않는다.
 
 ### 스테이징 위생
 
@@ -85,8 +116,7 @@
 
 ## 미정 사항
 
-- 디렉터리 구조와 컴포넌트 분리 기준
-- 스타일링 방식
+- 컴포넌트 분리 기준
 - 백엔드와의 통신 규약(경로 규칙, 에러 응답 형식)
 - 네비게이션 구성
 - 빌드·배포 방식
