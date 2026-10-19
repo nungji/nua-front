@@ -36,7 +36,7 @@ export type Piece = {
 
 export const BOARD_WIDTH = 320;
 export const BOARD_HEIGHT = 420;
-export const PIECE_PAD = 14;
+export const PIECE_PAD = 10;
 export const SNAP_RADIUS = 48;
 
 export const FLAT_EDGES: PieceEdges = { top: [], right: [], bottom: [], left: [] };
@@ -54,7 +54,7 @@ export const PIECES: Piece[] = [
     color: '#2F6FED',
     tone: '#9FB4D6',
     startX: 20,
-    startY: 345,
+    startY: 348,
     slotX: 170,
     slotY: 20,
     edges: { top: [], right: [], bottom: [{ at: 35, kind: 'socket' }], left: [] },
@@ -69,7 +69,7 @@ export const PIECES: Piece[] = [
     color: '#F05A28',
     tone: '#E3A9A0',
     startX: 110,
-    startY: 360,
+    startY: 358,
     slotX: 70,
     slotY: 44,
     edges: { top: [], right: [], bottom: [{ at: 13, kind: 'socket' }], left: [] },
@@ -84,7 +84,7 @@ export const PIECES: Piece[] = [
     color: '#F05A28',
     tone: '#C9C2B6',
     startX: 60,
-    startY: 262,
+    startY: 250,
     slotX: 40,
     slotY: 90,
     edges: {
