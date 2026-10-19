@@ -1,23 +1,27 @@
 import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Path, Svg } from 'react-native-svg';
 
-import { ConnectorGlyph } from '@/components/ConnectorGlyph';
+import { PieceGraphic } from '@/components/PieceGraphic';
 import { RepairmanPiece } from '@/components/RepairmanPiece';
 import {
-  ASSEMBLED_BOX,
   BOARD_HEIGHT,
   BOARD_WIDTH,
   Difficulty,
+  edgesFor,
+  PIECE_PAD,
   PIECES,
   Piece,
-  PieceId
+  PieceEdges,
+  PieceId,
+  SILHOUETTE_PATH
 } from '@/repairmanPuzzle';
 import { useRepairmanStore } from '@/store/useRepairmanStore';
 
 const LEVELS: { key: Difficulty; label: string; hint: string }[] = [
   { key: 'easy', label: '하', hint: '연결부 모양을 보고 맞춰 보자' },
-  { key: 'medium', label: '중', hint: '평평한 조각은 실루엣을 보고 맞춰 보자' },
+  { key: 'medium', label: '중', hint: '작은 조각은 테두리가 평평해' },
   { key: 'hard', label: '상', hint: '탭=돌리기 · 길게=뒤집기' }
 ];
 
@@ -56,9 +60,6 @@ export default function RepairmanScreen() {
       flip(id);
     }
   };
-
-  const hasConnector = (piece: Piece) =>
-    difficulty === 'easy' || (difficulty === 'medium' && piece.id === 'body');
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -109,26 +110,24 @@ export default function RepairmanScreen() {
           }}
         >
           {difficulty === 'easy'
-            ? PIECES.map((piece) => <Ghost key={piece.id} piece={piece} />)
+            ? PIECES.map((piece) => (
+                <Ghost key={piece.id} piece={piece} edges={edgesFor(piece, difficulty)} />
+              ))
             : null}
 
           {difficulty === 'hard' ? (
-            <View
-              style={{
-                position: 'absolute',
-                left: ASSEMBLED_BOX.x,
-                top: ASSEMBLED_BOX.y,
-                width: ASSEMBLED_BOX.width,
-                height: ASSEMBLED_BOX.height,
-                borderWidth: 2,
-                borderStyle: 'dashed',
-                borderColor: '#94A3B8',
-                borderRadius: 12
-              }}
-            />
+            <Svg width={BOARD_WIDTH} height={BOARD_HEIGHT} style={{ position: 'absolute' }}>
+              <Path
+                d={SILHOUETTE_PATH}
+                fill="none"
+                stroke="#94A3B8"
+                strokeWidth={2}
+                strokeDasharray="7 6"
+              />
+            </Svg>
           ) : (
             PIECES.map((piece) => (
-              <Slot key={piece.id} piece={piece} connectorVisible={hasConnector(piece)} />
+              <Slot key={piece.id} piece={piece} edges={edgesFor(piece, difficulty)} />
             ))
           )}
 
@@ -136,12 +135,12 @@ export default function RepairmanScreen() {
             <RepairmanPiece
               key={piece.id}
               piece={piece}
+              edges={edgesFor(piece, difficulty)}
               index={index}
               placed={placed[piece.id]}
               turns={turns[piece.id]}
               flipped={flipped[piece.id]}
               rotated={difficulty === 'hard'}
-              showConnector={hasConnector(piece)}
               showDetail={difficulty === 'hard'}
               onSnap={snap}
               onMiss={miss}
@@ -166,57 +165,30 @@ export default function RepairmanScreen() {
   );
 }
 
-function Ghost({ piece }: { piece: Piece }) {
-  const radius = piece.shape === 'circle' ? piece.width / 2 : 8;
-
+function Ghost({ piece, edges }: { piece: Piece; edges: PieceEdges }) {
   return (
     <View
       style={{
         position: 'absolute',
-        left: piece.slotX,
-        top: piece.slotY,
-        width: piece.width,
-        height: piece.height,
-        borderRadius: radius,
-        backgroundColor: piece.color,
-        opacity: 0.16
+        left: piece.slotX - PIECE_PAD,
+        top: piece.slotY - PIECE_PAD
       }}
-    />
+    >
+      <PieceGraphic piece={piece} edges={edges} fill={piece.color} opacity={0.16} />
+    </View>
   );
 }
 
-function Slot({ piece, connectorVisible }: { piece: Piece; connectorVisible: boolean }) {
-  const radius = piece.shape === 'circle' ? piece.width / 2 : 8;
-
+function Slot({ piece, edges }: { piece: Piece; edges: PieceEdges }) {
   return (
     <View
       style={{
         position: 'absolute',
-        left: piece.slotX,
-        top: piece.slotY,
-        width: piece.width,
-        height: piece.height
+        left: piece.slotX - PIECE_PAD,
+        top: piece.slotY - PIECE_PAD
       }}
     >
-      <View
-        style={{
-          flex: 1,
-          borderRadius: radius,
-          borderWidth: 2,
-          borderColor: '#94A3B8'
-        }}
-      />
-      {connectorVisible ? (
-        <View
-          style={{
-            position: 'absolute',
-            left: piece.width / 2 - 6,
-            top: piece.height - 6
-          }}
-        >
-          <ConnectorGlyph kind={piece.connector} filled={false} />
-        </View>
-      ) : null}
+      <PieceGraphic piece={piece} edges={edges} fill="none" stroke="#94A3B8" strokeWidth={2} />
     </View>
   );
 }

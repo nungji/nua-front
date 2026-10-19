@@ -9,17 +9,17 @@ import Animated, {
   withSpring
 } from 'react-native-reanimated';
 
-import { ConnectorGlyph } from '@/components/ConnectorGlyph';
-import { Piece, PieceId, SNAP_RADIUS } from '@/repairmanPuzzle';
+import { PieceGraphic } from '@/components/PieceGraphic';
+import { Piece, PieceEdges, PieceId, PIECE_PAD, SNAP_RADIUS } from '@/repairmanPuzzle';
 
 type RepairmanPieceProps = {
   piece: Piece;
+  edges: PieceEdges;
   index: number;
   placed: boolean;
   turns: number;
   flipped: boolean;
   rotated: boolean;
-  showConnector: boolean;
   showDetail: boolean;
   onSnap: (id: PieceId) => void;
   onMiss: () => void;
@@ -29,12 +29,12 @@ type RepairmanPieceProps = {
 
 export function RepairmanPiece({
   piece,
+  edges,
   index,
   placed,
   turns,
   flipped,
   rotated,
-  showConnector,
   showDetail,
   onSnap,
   onMiss,
@@ -103,8 +103,6 @@ export function RepairmanPiece({
     ]
   }));
 
-  const radius = piece.shape === 'circle' ? piece.width / 2 : 8;
-
   return (
     <GestureDetector gesture={Gesture.Exclusive(pan, longPress, tap)}>
       <Animated.View
@@ -112,45 +110,33 @@ export function RepairmanPiece({
         style={[
           {
             position: 'absolute',
-            left: piece.startX,
-            top: piece.startY,
-            width: piece.width,
-            height: piece.height,
-            borderRadius: radius
+            left: piece.startX - PIECE_PAD,
+            top: piece.startY - PIECE_PAD,
+            width: piece.width + PIECE_PAD * 2,
+            height: piece.height + PIECE_PAD * 2
           },
           animatedStyle
         ]}
       >
-        <View
-          style={{
-            flex: 1,
-            borderRadius: radius,
-            backgroundColor: placed ? piece.color : '#B9BEC7'
-          }}
+        <PieceGraphic
+          piece={piece}
+          edges={edges}
+          fill={placed ? piece.color : piece.tone}
+          stroke="#FFFFFF"
+          strokeWidth={1.5}
         />
         {showDetail ? (
           <View
             style={{
               position: 'absolute',
-              left: 6,
-              top: 6,
+              left: PIECE_PAD + 6,
+              top: PIECE_PAD + 6,
               width: 8,
               height: 8,
               borderRadius: 4,
               backgroundColor: 'rgba(255, 255, 255, 0.9)'
             }}
           />
-        ) : null}
-        {showConnector ? (
-          <View
-            style={{
-              position: 'absolute',
-              left: piece.width / 2 - 6,
-              top: piece.height - 6
-            }}
-          >
-            <ConnectorGlyph kind={piece.connector} filled />
-          </View>
         ) : null}
       </Animated.View>
     </GestureDetector>
