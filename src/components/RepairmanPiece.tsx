@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   FadeInDown,
@@ -20,7 +19,6 @@ type RepairmanPieceProps = {
   turns: number;
   flipped: boolean;
   rotated: boolean;
-  showDetail: boolean;
   onSnap: (id: PieceId) => void;
   onMiss: () => void;
   onTap: (id: PieceId) => void;
@@ -35,7 +33,6 @@ export function RepairmanPiece({
   turns,
   flipped,
   rotated,
-  showDetail,
   onSnap,
   onMiss,
   onTap,
@@ -125,19 +122,6 @@ export function RepairmanPiece({
           stroke="#FFFFFF"
           strokeWidth={1.5}
         />
-        {showDetail ? (
-          <View
-            style={{
-              position: 'absolute',
-              left: PIECE_PAD + 6,
-              top: PIECE_PAD + 6,
-              width: 8,
-              height: 8,
-              borderRadius: 4,
-              backgroundColor: 'rgba(255, 255, 255, 0.9)'
-            }}
-          />
-        ) : null}
       </Animated.View>
     </GestureDetector>
   );

@@ -1,7 +1,13 @@
-import { Circle, Path, Svg } from 'react-native-svg';
+import { Path, Svg } from 'react-native-svg';
 
-import { Piece, PieceEdges, PIECE_PAD } from '@/repairmanPuzzle';
-import { buildPiecePath } from '@/repairmanPiecePath';
+import {
+  Piece,
+  PieceEdges,
+  PIECE_PAD,
+  WHEEL_FLAT_CENTER,
+  WHEEL_FLAT_HALF
+} from '@/repairmanPuzzle';
+import { buildCirclePath, buildPiecePath } from '@/repairmanPiecePath';
 
 type PieceGraphicProps = {
   piece: Piece;
@@ -22,6 +28,10 @@ export function PieceGraphic({
 }: PieceGraphicProps) {
   const width = piece.width + PIECE_PAD * 2;
   const height = piece.height + PIECE_PAD * 2;
+  const path =
+    piece.shape === 'circle'
+      ? buildCirclePath(piece.width, piece.height, WHEEL_FLAT_CENTER, WHEEL_FLAT_HALF)
+      : buildPiecePath(piece.width, piece.height, edges, piece.chamfers);
 
   return (
     <Svg
@@ -30,23 +40,7 @@ export function PieceGraphic({
       viewBox={`${-PIECE_PAD} ${-PIECE_PAD} ${width} ${height}`}
       style={{ opacity }}
     >
-      {piece.shape === 'circle' ? (
-        <Circle
-          cx={piece.width / 2}
-          cy={piece.height / 2}
-          r={piece.width / 2}
-          fill={fill}
-          stroke={stroke}
-          strokeWidth={strokeWidth}
-        />
-      ) : (
-        <Path
-          d={buildPiecePath(piece.width, piece.height, edges)}
-          fill={fill}
-          stroke={stroke}
-          strokeWidth={strokeWidth}
-        />
-      )}
+      <Path d={path} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
     </Svg>
   );
 }

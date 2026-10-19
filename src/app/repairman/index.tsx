@@ -141,7 +141,6 @@ export default function RepairmanScreen() {
               turns={turns[piece.id]}
               flipped={flipped[piece.id]}
               rotated={difficulty === 'hard'}
-              showDetail={difficulty === 'hard'}
               onSnap={snap}
               onMiss={miss}
               onTap={handleTap}

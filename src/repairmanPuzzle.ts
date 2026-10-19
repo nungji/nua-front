@@ -18,6 +18,8 @@ export type PieceEdges = {
   left: Connector[];
 };
 
+export type Chamfers = [number, number, number, number];
+
 export type Piece = {
   id: PieceId;
   shape: PieceShape;
@@ -30,6 +32,7 @@ export type Piece = {
   slotX: number;
   slotY: number;
   edges: PieceEdges;
+  chamfers: Chamfers;
   initialTurns: number;
   initialFlipped: boolean;
 };
@@ -39,11 +42,16 @@ export const BOARD_HEIGHT = 420;
 export const PIECE_PAD = 10;
 export const SNAP_RADIUS = 48;
 
+export const WHEEL_FLAT_CENTER = -45;
+export const WHEEL_FLAT_HALF = 30;
+
 export const FLAT_EDGES: PieceEdges = { top: [], right: [], bottom: [], left: [] };
+export const NO_CHAMFERS: Chamfers = [0, 0, 0, 0];
 
 export const SILHOUETTE_PATH =
-  'M40,90 L70,90 L70,44 L96,44 L96,90 L170,90 L170,20 L240,20 L240,170 ' +
-  'L235.93,170 A28,28 0 0 1 180.07,170 L125.93,170 A28,28 0 0 1 70.07,170 L40,170 Z';
+  'M70,90 L70,54 L80,44 L96,44 L96,90 L170,90 L170,20 L218,20 L240,42 L240,170 ' +
+  'L235.93,170 A28,28 0 0 1 180.07,170 L125.93,170 A28,28 0 0 1 70.07,170 ' +
+  'L40,170 L40,120 Z';
 
 export const PIECES: Piece[] = [
   {
@@ -58,6 +66,7 @@ export const PIECES: Piece[] = [
     slotX: 170,
     slotY: 20,
     edges: { top: [], right: [], bottom: [{ at: 35, kind: 'socket' }], left: [] },
+    chamfers: [0, 22, 0, 0],
     initialTurns: 3,
     initialFlipped: false
   },
@@ -73,6 +82,7 @@ export const PIECES: Piece[] = [
     slotX: 70,
     slotY: 44,
     edges: { top: [], right: [], bottom: [{ at: 13, kind: 'socket' }], left: [] },
+    chamfers: [10, 0, 0, 0],
     initialTurns: 2,
     initialFlipped: true
   },
@@ -96,6 +106,7 @@ export const PIECES: Piece[] = [
       bottom: [],
       left: []
     },
+    chamfers: [30, 0, 0, 0],
     initialTurns: 1,
     initialFlipped: false
   },
@@ -111,6 +122,7 @@ export const PIECES: Piece[] = [
     slotX: 70,
     slotY: 140,
     edges: FLAT_EDGES,
+    chamfers: NO_CHAMFERS,
     initialTurns: 1,
     initialFlipped: false
   },
@@ -126,6 +138,7 @@ export const PIECES: Piece[] = [
     slotX: 180,
     slotY: 140,
     edges: FLAT_EDGES,
+    chamfers: NO_CHAMFERS,
     initialTurns: 3,
     initialFlipped: true
   }
