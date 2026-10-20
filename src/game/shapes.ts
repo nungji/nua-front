@@ -8,12 +8,9 @@ import {
 } from './geometry';
 import { Piece, PieceEdges, Point } from './types';
 
-export const WHEEL_FLAT_CENTER = -45;
-export const WHEEL_FLAT_HALF = 30;
-
 export function piecePath(piece: Piece, edges: PieceEdges) {
   if (piece.shape === 'circle') {
-    return circlePath(piece.width, piece.height, WHEEL_FLAT_CENTER, WHEEL_FLAT_HALF);
+    return circlePath(piece.width, piece.height);
   }
 
   if (piece.shape === 'semicircle') {
@@ -25,7 +22,7 @@ export function piecePath(piece: Piece, edges: PieceEdges) {
 
 export function piecePolygon(piece: Piece) {
   if (piece.shape === 'circle') {
-    return circlePolygon(piece.width, piece.height, WHEEL_FLAT_CENTER, WHEEL_FLAT_HALF);
+    return circlePolygon(piece.width, piece.height);
   }
 
   if (piece.shape === 'semicircle') {

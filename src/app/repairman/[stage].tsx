@@ -1,11 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Path, Svg } from 'react-native-svg';
 
-import { GamePiece } from '@/components/GamePiece';
+import { GamePiece, PieceHandle } from '@/components/GamePiece';
 import { PieceGraphic } from '@/components/PieceGraphic';
+import { createWorld, holdBody, placeBody, releaseBody, stepWorld } from '@/game/physics';
 import {
   BOARD_HEIGHT,
   BOARD_WIDTH,
@@ -17,10 +18,13 @@ import {
 import { Difficulty, Piece, PieceEdges } from '@/game/types';
 import { useRepairmanStore } from '@/store/useRepairmanStore';
 
+const FLIP_DELAY = 450;
+const FIXED_STEP = 16.666;
+
 const LEVELS: { key: Difficulty; label: string; hint: string }[] = [
   { key: 'easy', label: '하', hint: '연결부 모양을 보고 맞춰 보자' },
   { key: 'medium', label: '중', hint: '실루엣만 보고 맞춰 보자' },
-  { key: 'hard', label: '상', hint: '탭=뒤집기 · 길게=돌리기' }
+  { key: 'hard', label: '상', hint: '탭=돌리기 · 길게=뒤집기' }
 ];
 
 export default function RepairmanGame() {
@@ -43,6 +47,10 @@ export default function RepairmanGame() {
   const miss = useRepairmanStore((state) => state.miss);
   const reset = useRepairmanStore((state) => state.reset);
 
+  const handles = useRef<Record<string, PieceHandle>>({});
+  const worldRef = useRef<ReturnType<typeof createWorld> | null>(null);
+  const flipTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
   useEffect(() => {
     if (stageId !== stageParam) {
       openStage(stageParam);
@@ -55,21 +63,128 @@ export default function RepairmanGame() {
   const completed = placedCount === pieces.length;
   const level = LEVELS.find((item) => item.key === difficulty) ?? LEVELS[0];
 
+  const register = useCallback((id: string, handle: PieceHandle) => {
+    handles.current[id] = handle;
+  }, []);
+
+  const freeze = useCallback(
+    (id: string, frozen: boolean) => {
+      const world = worldRef.current;
+      const piece = pieces.find((item) => item.id === id);
+
+      if (!world || !piece) {
+        return;
+      }
+
+      const centerX = piece.slot.x + piece.width / 2;
+      const centerY = piece.slot.y + piece.height / 2;
+
+      if (frozen) {
+        placeBody(world, id, centerX, centerY);
+        return;
+      }
+
+      releaseBody(world, id, centerX, centerY);
+    },
+    [pieces]
+  );
+
+  useEffect(() => {
+    const world = createWorld(pieces, { width: BOARD_WIDTH, height: BOARD_HEIGHT });
+    worldRef.current = world;
+    let frame = 0;
+    let last = Date.now();
+    let accumulator = 0;
+
+    const loop = () => {
+      const now = Date.now();
+      accumulator += Math.min(50, Math.max(0, now - last));
+      last = now;
+
+      for (const id of Object.keys(world.bodies)) {
+        const handle = handles.current[id];
+
+        if (handle && handle.mode.value === 1) {
+          holdBody(world, id, handle.dragX.value, handle.dragY.value);
+        }
+      }
+
+      let steps = 0;
+
+      while (accumulator >= FIXED_STEP && steps < 3) {
+        stepWorld(world, FIXED_STEP);
+        accumulator -= FIXED_STEP;
+        steps += 1;
+      }
+
+      for (const id of Object.keys(world.bodies)) {
+        const handle = handles.current[id];
+
+        if (!handle || handle.mode.value !== 0) {
+          continue;
+        }
+
+        const body = world.bodies[id];
+
+        if (body.isSleeping) {
+          continue;
+        }
+
+        handle.x.value = body.position.x;
+        handle.y.value = body.position.y;
+      }
+
+      frame = requestAnimationFrame(loop);
+    };
+
+    frame = requestAnimationFrame(loop);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      worldRef.current = null;
+    };
+  }, [pieces]);
+
+  useEffect(() => {
+    const timers = flipTimers.current;
+
+    return () => {
+      Object.values(timers).forEach(clearTimeout);
+    };
+  }, []);
+
+  const canTurn = useCallback(
+    (id: string) => {
+      const piece = pieces.find((item) => item.id === id);
+
+      return difficulty === 'hard' && !placed[id] && piece?.shape !== 'circle';
+    },
+    [difficulty, placed, pieces]
+  );
+
   const handleTap = (id: string) => {
     if (placed[id]) {
       unsnap(id);
       return;
     }
 
-    if (difficulty === 'hard') {
-      flip(id);
+    if (!canTurn(id)) {
+      return;
     }
+
+    clearTimeout(flipTimers.current[id]);
+    rotate(id);
   };
 
   const handleLongPress = (id: string) => {
-    if (difficulty === 'hard' && !placed[id]) {
-      rotate(id);
+    if (!canTurn(id)) {
+      return;
     }
+
+    clearTimeout(flipTimers.current[id]);
+    flipTimers.current[id] = setTimeout(() => {
+      flip(id);
+    }, FLIP_DELAY);
   };
 
   return (
@@ -152,7 +267,9 @@ export default function RepairmanGame() {
               blocked={Boolean(piece.requires && !placed[piece.requires])}
               turns={turns[piece.id] ?? 0}
               flipped={flipped[piece.id] ?? false}
-              rotatable={difficulty === 'hard'}
+              rotatable={difficulty === 'hard' && piece.shape !== 'circle'}
+              register={register}
+              onFreeze={freeze}
               onAttempt={snap}
               onMiss={miss}
               onTap={handleTap}

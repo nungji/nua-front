@@ -234,28 +234,26 @@ export function semicirclePolygon(width: number, edges: PieceEdges) {
   return points;
 }
 
-export function circlePath(width: number, height: number, centerDeg: number, halfDeg: number) {
+export function circlePath(width: number, height: number) {
   const radius = width / 2;
   const centerX = width / 2;
   const centerY = height / 2;
-  const start = ((centerDeg + halfDeg) * Math.PI) / 180;
-  const end = ((centerDeg - halfDeg) * Math.PI) / 180;
 
   return (
-    `M${round(centerX + radius * Math.cos(start))},${round(centerY + radius * Math.sin(start))} ` +
-    `A${radius},${radius} 0 1 1 ${round(centerX + radius * Math.cos(end))},${round(centerY + radius * Math.sin(end))} Z`
+    `M${round(centerX + radius)},${round(centerY)} ` +
+    `A${radius},${radius} 0 1 1 ${round(centerX - radius)},${round(centerY)} ` +
+    `A${radius},${radius} 0 1 1 ${round(centerX + radius)},${round(centerY)} Z`
   );
 }
 
-export function circlePolygon(width: number, height: number, centerDeg: number, halfDeg: number) {
+export function circlePolygon(width: number, height: number) {
   const radius = width / 2;
   const centerX = width / 2;
   const centerY = height / 2;
   const points: Point[] = [];
-  const sweep = 360 - halfDeg * 2;
 
-  for (let step = 0; step <= 32; step += 1) {
-    const angle = ((centerDeg + halfDeg + (sweep * step) / 32) * Math.PI) / 180;
+  for (let step = 0; step < 36; step += 1) {
+    const angle = ((step * 360) / 36) * (Math.PI / 180);
     points.push({ x: centerX + radius * Math.cos(angle), y: centerY + radius * Math.sin(angle) });
   }
 

@@ -43,6 +43,7 @@ export type Stage = {
   id: string;
   name: string;
   parts: PartSpec[];
+  offsetX?: number;
 };
 
 export type Piece = {

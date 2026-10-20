@@ -2,8 +2,8 @@ import { buildSilhouettePath } from './silhouette';
 import { shiftedPolygon } from './shapes';
 import { Chamfers, Difficulty, PartSpec, Piece, PieceEdges, Puzzle, Stage } from './types';
 
-export const BOARD_WIDTH = 320;
-export const BOARD_HEIGHT = 470;
+export const BOARD_WIDTH = 360;
+export const BOARD_HEIGHT = 480;
 export const PIECE_PAD = 10;
 export const SNAP_RADIUS = 48;
 
@@ -269,8 +269,8 @@ const PLANE_PARTS: PartSpec[] = [
 ];
 
 export const STAGES: Stage[] = [
-  { id: 'train', name: '기차', parts: TRAIN_PARTS },
-  { id: 'car', name: '자동차', parts: CAR_PARTS },
+  { id: 'train', name: '기차', parts: TRAIN_PARTS, offsetX: 40 },
+  { id: 'car', name: '자동차', parts: CAR_PARTS, offsetX: 20 },
   { id: 'plane', name: '비행기', parts: PLANE_PARTS }
 ];
 
@@ -324,7 +324,7 @@ export function buildPuzzle(stageId: string, difficulty: Difficulty): Puzzle {
       tone: part.tone ?? TONES[index % TONES.length],
       color: part.color ?? COLORS[index % COLORS.length],
       start: { x: 0, y: 0 },
-      slot: { x: part.slot.x + shift.x, y: part.slot.y + shift.y },
+      slot: { x: part.slot.x + shift.x + (stage.offsetX ?? 0), y: part.slot.y + shift.y },
       edges: {
         top: part.edges?.top ?? [],
         right: part.edges?.right ?? [],
@@ -333,8 +333,8 @@ export function buildPuzzle(stageId: string, difficulty: Difficulty): Puzzle {
       },
       chamfers: part.chamfers ?? NO_CHAMFERS,
       requires: overlapping ? part.requires : undefined,
-      initialTurns: overlapping ? INITIAL_TURNS[index % INITIAL_TURNS.length] : 0,
-      initialFlipped: overlapping ? INITIAL_FLIPS[index % INITIAL_FLIPS.length] : false
+      initialTurns: overlapping && shape !== 'circle' ? INITIAL_TURNS[index % INITIAL_TURNS.length] : 0,
+      initialFlipped: overlapping && shape !== 'circle' ? INITIAL_FLIPS[index % INITIAL_FLIPS.length] : false
     };
   });
 
