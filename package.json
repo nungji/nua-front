@@ -4,11 +4,13 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/metro-runtime": "~57.0.17",
+    "@types/matter-js": "^0.20.2",
     "expo": "~57.0.27",
     "expo-constants": "~57.0.21",
     "expo-linking": "~57.0.12",
     "expo-router": "~57.0.25",
     "expo-status-bar": "~57.0.1",
+    "matter-js": "^0.20.0",
     "nativewind": "^4.2.7",
     "polygon-clipping": "^0.15.7",
     "react": "19.2.3",
