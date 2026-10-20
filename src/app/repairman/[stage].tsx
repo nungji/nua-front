@@ -1,25 +1,30 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS, useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Path, Svg } from 'react-native-svg';
 
-import { GamePiece, PieceHandle } from '@/components/GamePiece';
+import { GamePiece } from '@/components/GamePiece';
 import { PieceGraphic } from '@/components/PieceGraphic';
+import { pickPiece } from '@/game/hit';
 import { createWorld, holdBody, placeBody, releaseBody, stepWorld } from '@/game/physics';
+import { piecePolygon } from '@/game/shapes';
 import {
   BOARD_HEIGHT,
   BOARD_WIDTH,
   buildPuzzle,
   edgesFor,
   PIECE_PAD,
+  SNAP_RADIUS,
   STAGES
 } from '@/game/stages';
 import { Difficulty, Piece, PieceEdges } from '@/game/types';
 import { useRepairmanStore } from '@/store/useRepairmanStore';
 
-const FLIP_DELAY = 450;
 const FIXED_STEP = 16.666;
+const FLIP_DELAY = 450;
 
 const LEVELS: { key: Difficulty; label: string; hint: string }[] = [
   { key: 'easy', label: '하', hint: '연결부 모양을 보고 맞춰 보자' },
@@ -47,10 +52,6 @@ export default function RepairmanGame() {
   const miss = useRepairmanStore((state) => state.miss);
   const reset = useRepairmanStore((state) => state.reset);
 
-  const handles = useRef<Record<string, PieceHandle>>({});
-  const worldRef = useRef<ReturnType<typeof createWorld> | null>(null);
-  const flipTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-
   useEffect(() => {
     if (stageId !== stageParam) {
       openStage(stageParam);
@@ -63,35 +64,67 @@ export default function RepairmanGame() {
   const completed = placedCount === pieces.length;
   const level = LEVELS.find((item) => item.key === difficulty) ?? LEVELS[0];
 
-  const register = useCallback((id: string, handle: PieceHandle) => {
-    handles.current[id] = handle;
-  }, []);
+  const worldRef = useRef<ReturnType<typeof createWorld> | null>(null);
+  const placedRef = useRef(placed);
+  const flipTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  const freeze = useCallback(
-    (id: string, frozen: boolean) => {
-      const world = worldRef.current;
-      const piece = pieces.find((item) => item.id === id);
+  const hits = useSharedValue<number[]>([]);
+  const activeIndex = useSharedValue(-1);
+  const touchX = useSharedValue(0);
+  const touchY = useSharedValue(0);
+  const grabDX = useSharedValue(0);
+  const grabDY = useSharedValue(0);
+  const heldIndex = useSharedValue(-1);
 
-      if (!world || !piece) {
-        return;
-      }
+  placedRef.current = placed;
 
-      const centerX = piece.slot.x + piece.width / 2;
-      const centerY = piece.slot.y + piece.height / 2;
+  const shapes = useMemo(
+    () =>
+      pieces.map((piece) => {
+        const flat: number[] = [];
 
-      if (frozen) {
-        placeBody(world, id, centerX, centerY);
-        return;
-      }
+        for (const point of piecePolygon(piece)) {
+          flat.push(point.x, point.y);
+        }
 
-      releaseBody(world, id, centerX, centerY);
-    },
+        return flat;
+      }),
     [pieces]
   );
+
+  const sizes = useMemo(() => pieces.map((piece) => [piece.width, piece.height]), [pieces]);
+  const placedFlags = useMemo(() => pieces.map((piece) => Boolean(placed[piece.id])), [pieces, placed]);
+
+  useEffect(() => {
+    const next: number[] = [];
+
+    for (const piece of pieces) {
+      next.push(
+        piece.start.x + piece.width / 2,
+        piece.start.y + piece.height / 2,
+        (turns[piece.id] ?? 0) * 90,
+        flipped[piece.id] ? -1 : 1
+      );
+    }
+
+    hits.value = next;
+  }, [pieces, hits]);
+
+  useEffect(() => {
+    const next = hits.value.slice();
+
+    pieces.forEach((piece, index) => {
+      next[index * 4 + 2] = (turns[piece.id] ?? 0) * 90;
+      next[index * 4 + 3] = flipped[piece.id] ? -1 : 1;
+    });
+
+    hits.value = next;
+  }, [turns, flipped, pieces, hits]);
 
   useEffect(() => {
     const world = createWorld(pieces, { width: BOARD_WIDTH, height: BOARD_HEIGHT });
     worldRef.current = world;
+    const frozen = new Set<string>();
     let frame = 0;
     let last = Date.now();
     let accumulator = 0;
@@ -101,12 +134,24 @@ export default function RepairmanGame() {
       accumulator += Math.min(50, Math.max(0, now - last));
       last = now;
 
-      for (const id of Object.keys(world.bodies)) {
-        const handle = handles.current[id];
+      for (const piece of pieces) {
+        const isPlaced = placedRef.current[piece.id] ?? false;
+        const centerX = piece.slot.x + piece.width / 2;
+        const centerY = piece.slot.y + piece.height / 2;
 
-        if (handle && handle.mode.value === 1) {
-          holdBody(world, id, handle.dragX.value, handle.dragY.value);
+        if (isPlaced && !frozen.has(piece.id)) {
+          placeBody(world, piece.id, centerX, centerY);
+          frozen.add(piece.id);
+        } else if (!isPlaced && frozen.has(piece.id)) {
+          releaseBody(world, piece.id, centerX, centerY);
+          frozen.delete(piece.id);
         }
+      }
+
+      const active = activeIndex.value;
+
+      if (active >= 0 && active < pieces.length && !placedRef.current[pieces[active].id]) {
+        holdBody(world, pieces[active].id, touchX.value - grabDX.value, touchY.value - grabDY.value);
       }
 
       let steps = 0;
@@ -117,21 +162,25 @@ export default function RepairmanGame() {
         steps += 1;
       }
 
-      for (const id of Object.keys(world.bodies)) {
-        const handle = handles.current[id];
+      const awake =
+        active >= 0 || pieces.some((piece) => !world.bodies[piece.id].isSleeping);
 
-        if (!handle || handle.mode.value !== 0) {
-          continue;
-        }
+      if (awake) {
+        const next = hits.value.slice();
 
-        const body = world.bodies[id];
+        pieces.forEach((piece, index) => {
+          if (placedRef.current[piece.id]) {
+            next[index * 4] = piece.slot.x + piece.width / 2;
+            next[index * 4 + 1] = piece.slot.y + piece.height / 2;
+            return;
+          }
 
-        if (body.isSleeping) {
-          continue;
-        }
+          const body = world.bodies[piece.id];
+          next[index * 4] = body.position.x;
+          next[index * 4 + 1] = body.position.y;
+        });
 
-        handle.x.value = body.position.x;
-        handle.y.value = body.position.y;
+        hits.value = next;
       }
 
       frame = requestAnimationFrame(loop);
@@ -143,7 +192,7 @@ export default function RepairmanGame() {
       cancelAnimationFrame(frame);
       worldRef.current = null;
     };
-  }, [pieces]);
+  }, [pieces, hits, activeIndex, touchX, touchY, grabDX, grabDY]);
 
   useEffect(() => {
     const timers = flipTimers.current;
@@ -153,39 +202,142 @@ export default function RepairmanGame() {
     };
   }, []);
 
-  const canTurn = useCallback(
-    (id: string) => {
-      const piece = pieces.find((item) => item.id === id);
+  const finishDrag = useCallback(
+    (index: number, centerX: number, centerY: number) => {
+      const piece = pieces[index];
 
-      return difficulty === 'hard' && !placed[id] && piece?.shape !== 'circle';
+      if (!piece) {
+        return;
+      }
+
+      const world = worldRef.current;
+      const targetX = piece.slot.x + piece.width / 2;
+      const targetY = piece.slot.y + piece.height / 2;
+      const distance = Math.hypot(centerX - targetX, centerY - targetY);
+      const rotatable = difficulty === 'hard' && piece.shape !== 'circle';
+      const aligned = !rotatable || ((turns[piece.id] ?? 0) % 4 === 0 && !flipped[piece.id]);
+      const blocked = Boolean(piece.requires && !placed[piece.requires]);
+
+      if (distance <= SNAP_RADIUS && aligned && !blocked) {
+        snap(piece.id);
+        return;
+      }
+
+      if (world) {
+        releaseBody(world, piece.id, centerX, centerY);
+      }
+
+      miss();
     },
-    [difficulty, placed, pieces]
+    [difficulty, flipped, miss, pieces, placed, snap, turns]
   );
 
-  const handleTap = (id: string) => {
-    if (placed[id]) {
-      unsnap(id);
-      return;
-    }
+  const handleTapIndex = useCallback(
+    (index: number) => {
+      const piece = pieces[index];
 
-    if (!canTurn(id)) {
-      return;
-    }
+      if (!piece) {
+        return;
+      }
 
-    clearTimeout(flipTimers.current[id]);
-    rotate(id);
-  };
+      if (placed[piece.id]) {
+        unsnap(piece.id);
+        return;
+      }
 
-  const handleLongPress = (id: string) => {
-    if (!canTurn(id)) {
-      return;
-    }
+      if (difficulty === 'hard' && piece.shape !== 'circle') {
+        clearTimeout(flipTimers.current[piece.id]);
+        rotate(piece.id);
+      }
+    },
+    [difficulty, placed, pieces, rotate, unsnap]
+  );
 
-    clearTimeout(flipTimers.current[id]);
-    flipTimers.current[id] = setTimeout(() => {
-      flip(id);
-    }, FLIP_DELAY);
-  };
+  const handleLongPressIndex = useCallback(
+    (index: number) => {
+      const piece = pieces[index];
+
+      if (!piece || placed[piece.id] || difficulty !== 'hard' || piece.shape === 'circle') {
+        return;
+      }
+
+      clearTimeout(flipTimers.current[piece.id]);
+      flipTimers.current[piece.id] = setTimeout(() => {
+        flip(piece.id);
+      }, FLIP_DELAY);
+    },
+    [difficulty, flip, placed, pieces]
+  );
+
+  const pan = Gesture.Pan()
+    .onBegin((event) => {
+      const values = hits.value;
+      const index = pickPiece(values, shapes, sizes, event.x, event.y);
+
+      if (index < 0 || placedFlags[index]) {
+        activeIndex.value = -1;
+        return;
+      }
+
+      activeIndex.value = index;
+      grabDX.value = event.x - values[index * 4];
+      grabDY.value = event.y - values[index * 4 + 1];
+      touchX.value = event.x;
+      touchY.value = event.y;
+    })
+    .onUpdate((event) => {
+      if (activeIndex.value < 0) {
+        return;
+      }
+
+      touchX.value = event.x;
+      touchY.value = event.y;
+    })
+    .onEnd(() => {
+      const index = activeIndex.value;
+
+      if (index < 0) {
+        return;
+      }
+
+      const centerX = touchX.value - grabDX.value;
+      const centerY = touchY.value - grabDY.value;
+
+      activeIndex.value = -1;
+      runOnJS(finishDrag)(index, centerX, centerY);
+    })
+    .onFinalize(() => {
+      if (activeIndex.value >= 0) {
+        activeIndex.value = -1;
+      }
+    });
+
+  const longPress = Gesture.LongPress()
+    .minDuration(380)
+    .onStart((event) => {
+      heldIndex.value = pickPiece(hits.value, shapes, sizes, event.x, event.y);
+    })
+    .onFinalize(() => {
+      const index = heldIndex.value;
+
+      heldIndex.value = -1;
+
+      if (index >= 0) {
+        runOnJS(handleLongPressIndex)(index);
+      }
+    });
+
+  const tap = Gesture.Tap()
+    .maxDuration(320)
+    .onEnd((event) => {
+      const index = pickPiece(hits.value, shapes, sizes, event.x, event.y);
+
+      if (index >= 0) {
+        runOnJS(handleTapIndex)(index);
+      }
+    });
+
+  const gesture = Gesture.Exclusive(pan, longPress, tap);
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -226,57 +378,57 @@ export default function RepairmanGame() {
       </View>
 
       <View className="flex-1 items-center justify-center">
-        <View
-          className="overflow-hidden rounded-3xl bg-slate-50"
-          style={{
-            width: BOARD_WIDTH,
-            height: BOARD_HEIGHT,
-            borderWidth: completed ? 3 : 0,
-            borderColor: '#F05A28'
-          }}
-        >
-          {difficulty === 'easy'
-            ? pieces.map((piece) => (
-                <Ghost key={piece.id} piece={piece} edges={edgesFor(piece, difficulty)} />
+        <GestureDetector gesture={gesture}>
+          <View
+            className="overflow-hidden rounded-3xl bg-slate-50"
+            style={{
+              width: BOARD_WIDTH,
+              height: BOARD_HEIGHT,
+              borderWidth: completed ? 3 : 0,
+              borderColor: '#F05A28'
+            }}
+          >
+            {difficulty === 'easy'
+              ? pieces.map((piece) => (
+                  <Ghost key={piece.id} piece={piece} edges={edgesFor(piece, difficulty)} />
+                ))
+              : null}
+
+            {difficulty === 'easy' ? (
+              pieces.map((piece) => (
+                <Slot key={piece.id} piece={piece} edges={edgesFor(piece, difficulty)} />
               ))
-            : null}
+            ) : (
+              <Svg width={BOARD_WIDTH} height={BOARD_HEIGHT} style={{ position: 'absolute' }}>
+                <Path
+                  d={puzzle.silhouette}
+                  fill="none"
+                  stroke="#94A3B8"
+                  strokeWidth={2}
+                  strokeDasharray="7 6"
+                />
+              </Svg>
+            )}
 
-          {difficulty === 'easy' ? (
-            pieces.map((piece) => (
-              <Slot key={piece.id} piece={piece} edges={edgesFor(piece, difficulty)} />
-            ))
-          ) : (
-            <Svg width={BOARD_WIDTH} height={BOARD_HEIGHT} style={{ position: 'absolute' }}>
-              <Path
-                d={puzzle.silhouette}
-                fill="none"
-                stroke="#94A3B8"
-                strokeWidth={2}
-                strokeDasharray="7 6"
+            {pieces.map((piece, index) => (
+              <GamePiece
+                key={piece.id}
+                piece={piece}
+                edges={edgesFor(piece, difficulty)}
+                index={index}
+                placed={placed[piece.id] ?? false}
+                turns={turns[piece.id] ?? 0}
+                flipped={flipped[piece.id] ?? false}
+                hits={hits}
+                activeIndex={activeIndex}
+                touchX={touchX}
+                touchY={touchY}
+                grabDX={grabDX}
+                grabDY={grabDY}
               />
-            </Svg>
-          )}
-
-          {pieces.map((piece, index) => (
-            <GamePiece
-              key={piece.id}
-              piece={piece}
-              edges={edgesFor(piece, difficulty)}
-              index={index}
-              placed={placed[piece.id] ?? false}
-              blocked={Boolean(piece.requires && !placed[piece.requires])}
-              turns={turns[piece.id] ?? 0}
-              flipped={flipped[piece.id] ?? false}
-              rotatable={difficulty === 'hard' && piece.shape !== 'circle'}
-              register={register}
-              onFreeze={freeze}
-              onAttempt={snap}
-              onMiss={miss}
-              onTap={handleTap}
-              onLongPress={handleLongPress}
-            />
-          ))}
-        </View>
+            ))}
+          </View>
+        </GestureDetector>
       </View>
 
       <View className="items-center pb-5">
