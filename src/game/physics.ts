@@ -39,7 +39,8 @@ export function createWorld(pieces: Piece[], size: BoardSize): PhysicsWorld {
     const y = -70 - index * 64;
 
     const body = Bodies.rectangle(x, y, piece.width, piece.height, {
-      friction: 0.55,
+      friction: 0.18,
+      frictionStatic: 0.2,
       frictionAir: 0.02,
       restitution: 0.12,
       density: 0.0015
@@ -92,5 +93,6 @@ export function releaseBody(world: PhysicsWorld, id: string, x: number, y: numbe
   Body.setStatic(body, false);
   Sleeping.set(body, false);
   Body.setPosition(body, { x, y });
-  Body.setVelocity(body, { x: 0, y: 0 });
+  Body.setVelocity(body, { x: 0, y: 1.4 });
+  Body.setAngularVelocity(body, 0);
 }
