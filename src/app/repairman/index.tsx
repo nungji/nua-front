@@ -11,17 +11,16 @@ import {
   Difficulty,
   edgesFor,
   PIECE_PAD,
-  PIECES,
   Piece,
   PieceEdges,
   PieceId,
-  SILHOUETTE_PATH
+  PUZZLES
 } from '@/repairmanPuzzle';
 import { useRepairmanStore } from '@/store/useRepairmanStore';
 
 const LEVELS: { key: Difficulty; label: string; hint: string }[] = [
   { key: 'easy', label: '하', hint: '연결부 모양을 보고 맞춰 보자' },
-  { key: 'medium', label: '중', hint: '작은 조각은 테두리가 평평해' },
+  { key: 'medium', label: '중', hint: '실루엣만 보고 맞춰 보자' },
   { key: 'hard', label: '상', hint: '탭=돌리기 · 길게=뒤집기' }
 ];
 
@@ -40,8 +39,10 @@ export default function RepairmanScreen() {
   const miss = useRepairmanStore((state) => state.miss);
   const reset = useRepairmanStore((state) => state.reset);
 
-  const placedCount = PIECES.filter((piece) => placed[piece.id]).length;
-  const completed = placedCount === PIECES.length;
+  const puzzle = PUZZLES[difficulty];
+  const pieces = puzzle.pieces;
+  const placedCount = pieces.filter((piece) => placed[piece.id]).length;
+  const completed = placedCount === pieces.length;
   const level = LEVELS.find((item) => item.key === difficulty) ?? LEVELS[0];
 
   const handleTap = (id: PieceId) => {
@@ -110,28 +111,28 @@ export default function RepairmanScreen() {
           }}
         >
           {difficulty === 'easy'
-            ? PIECES.map((piece) => (
+            ? pieces.map((piece) => (
                 <Ghost key={piece.id} piece={piece} edges={edgesFor(piece, difficulty)} />
               ))
             : null}
 
-          {difficulty === 'hard' ? (
+          {difficulty === 'easy' ? (
+            pieces.map((piece) => (
+              <Slot key={piece.id} piece={piece} edges={edgesFor(piece, difficulty)} />
+            ))
+          ) : (
             <Svg width={BOARD_WIDTH} height={BOARD_HEIGHT} style={{ position: 'absolute' }}>
               <Path
-                d={SILHOUETTE_PATH}
+                d={puzzle.silhouette}
                 fill="none"
                 stroke="#94A3B8"
                 strokeWidth={2}
                 strokeDasharray="7 6"
               />
             </Svg>
-          ) : (
-            PIECES.map((piece) => (
-              <Slot key={piece.id} piece={piece} edges={edgesFor(piece, difficulty)} />
-            ))
           )}
 
-          {PIECES.map((piece, index) => (
+          {pieces.map((piece, index) => (
             <RepairmanPiece
               key={piece.id}
               piece={piece}
@@ -152,7 +153,7 @@ export default function RepairmanScreen() {
 
       <View className="items-center pb-5">
         <Text className="text-sm text-gray-500">
-          놓은 조각 {placedCount}/{PIECES.length} · 시도 {snaps + misses}
+          놓은 조각 {placedCount}/{pieces.length} · 시도 {snaps + misses}
         </Text>
         {completed ? (
           <Text className="mt-1 text-2xl font-bold text-orange-500">뿌우뿌우!</Text>

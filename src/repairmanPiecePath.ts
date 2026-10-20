@@ -102,3 +102,14 @@ export function buildCirclePath(width: number, height: number, centerDeg: number
 
   return `M${round(startX)},${round(startY)} A${radius},${radius} 0 1 1 ${round(endX)},${round(endY)} Z`;
 }
+
+export function buildSemicirclePath(width: number, edges: PieceEdges) {
+  const commands = [
+    'M0,0',
+    ...edgeCommands(edges.top, { x: 0, y: 0 }, { x: 1, y: 0 }, 0, width, { x: 0, y: -1 }),
+    `A${round(width / 2)},${round(width / 2)} 0 0 1 0,0`,
+    'Z'
+  ];
+
+  return commands.join(' ');
+}

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { Difficulty, PIECES, Piece, PieceId } from '@/repairmanPuzzle';
+import { Difficulty, Piece, PieceId, PUZZLES } from '@/repairmanPuzzle';
 
 type RepairmanState = {
   difficulty: Difficulty;
@@ -18,18 +18,20 @@ type RepairmanState = {
   reset: () => void;
 };
 
-function fill<T>(pick: (piece: Piece) => T): Record<PieceId, T> {
-  return PIECES.reduce<Record<PieceId, T>>(
+function fill<T>(pieces: Piece[], pick: (piece: Piece) => T): Record<PieceId, T> {
+  return pieces.reduce<Record<PieceId, T>>(
     (accumulator, piece) => ({ ...accumulator, [piece.id]: pick(piece) }),
     {} as Record<PieceId, T>
   );
 }
 
 function createBoard(difficulty: Difficulty) {
+  const pieces = PUZZLES[difficulty].pieces;
+
   return {
-    placed: fill(() => false),
-    turns: fill((piece) => (difficulty === 'hard' ? piece.initialTurns : 0)),
-    flipped: fill((piece) => (difficulty === 'hard' ? piece.initialFlipped : false)),
+    placed: fill(pieces, () => false),
+    turns: fill(pieces, (piece) => (difficulty === 'hard' ? piece.initialTurns : 0)),
+    flipped: fill(pieces, (piece) => (difficulty === 'hard' ? piece.initialFlipped : false)),
     snaps: 0,
     misses: 0
   };

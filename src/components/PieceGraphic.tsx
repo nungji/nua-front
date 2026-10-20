@@ -7,7 +7,7 @@ import {
   WHEEL_FLAT_CENTER,
   WHEEL_FLAT_HALF
 } from '@/repairmanPuzzle';
-import { buildCirclePath, buildPiecePath } from '@/repairmanPiecePath';
+import { buildCirclePath, buildPiecePath, buildSemicirclePath } from '@/repairmanPiecePath';
 
 type PieceGraphicProps = {
   piece: Piece;
@@ -17,6 +17,18 @@ type PieceGraphicProps = {
   strokeWidth?: number;
   opacity?: number;
 };
+
+function buildPath(piece: Piece, edges: PieceEdges) {
+  if (piece.shape === 'circle') {
+    return buildCirclePath(piece.width, piece.height, WHEEL_FLAT_CENTER, WHEEL_FLAT_HALF);
+  }
+
+  if (piece.shape === 'semicircle') {
+    return buildSemicirclePath(piece.width, edges);
+  }
+
+  return buildPiecePath(piece.width, piece.height, edges, piece.chamfers);
+}
 
 export function PieceGraphic({
   piece,
@@ -28,10 +40,6 @@ export function PieceGraphic({
 }: PieceGraphicProps) {
   const width = piece.width + PIECE_PAD * 2;
   const height = piece.height + PIECE_PAD * 2;
-  const path =
-    piece.shape === 'circle'
-      ? buildCirclePath(piece.width, piece.height, WHEEL_FLAT_CENTER, WHEEL_FLAT_HALF)
-      : buildPiecePath(piece.width, piece.height, edges, piece.chamfers);
 
   return (
     <Svg
@@ -40,7 +48,7 @@ export function PieceGraphic({
       viewBox={`${-PIECE_PAD} ${-PIECE_PAD} ${width} ${height}`}
       style={{ opacity }}
     >
-      <Path d={path} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
+      <Path d={buildPath(piece, edges)} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
     </Svg>
   );
 }
