@@ -1,47 +1,52 @@
 import { create } from 'zustand';
 
-import { Difficulty, Piece, PieceId, PUZZLES } from '@/repairmanPuzzle';
+import { buildPuzzle, STAGES } from '@/game/stages';
+import { Difficulty, Piece } from '@/game/types';
 
 type RepairmanState = {
+  stageId: string;
   difficulty: Difficulty;
-  placed: Record<PieceId, boolean>;
-  turns: Record<PieceId, number>;
-  flipped: Record<PieceId, boolean>;
+  placed: Record<string, boolean>;
+  turns: Record<string, number>;
+  flipped: Record<string, boolean>;
   snaps: number;
   misses: number;
+  openStage: (stageId: string) => void;
   setDifficulty: (difficulty: Difficulty) => void;
-  snap: (id: PieceId) => void;
-  unsnap: (id: PieceId) => void;
-  rotate: (id: PieceId) => void;
-  flip: (id: PieceId) => void;
-  miss: () => void;
   reset: () => void;
+  snap: (id: string) => void;
+  unsnap: (id: string) => void;
+  rotate: (id: string) => void;
+  flip: (id: string) => void;
+  miss: () => void;
 };
 
-function fill<T>(pieces: Piece[], pick: (piece: Piece) => T): Record<PieceId, T> {
-  return pieces.reduce<Record<PieceId, T>>(
+function fill<T>(pieces: Piece[], pick: (piece: Piece) => T): Record<string, T> {
+  return pieces.reduce<Record<string, T>>(
     (accumulator, piece) => ({ ...accumulator, [piece.id]: pick(piece) }),
-    {} as Record<PieceId, T>
+    {} as Record<string, T>
   );
 }
 
-function createBoard(difficulty: Difficulty) {
-  const pieces = PUZZLES[difficulty].pieces;
+function createSession(stageId: string, difficulty: Difficulty) {
+  const { pieces } = buildPuzzle(stageId, difficulty);
 
   return {
+    stageId,
+    difficulty,
     placed: fill(pieces, () => false),
-    turns: fill(pieces, (piece) => (difficulty === 'hard' ? piece.initialTurns : 0)),
-    flipped: fill(pieces, (piece) => (difficulty === 'hard' ? piece.initialFlipped : false)),
+    turns: fill(pieces, (piece) => piece.initialTurns),
+    flipped: fill(pieces, (piece) => piece.initialFlipped),
     snaps: 0,
     misses: 0
   };
 }
 
 export const useRepairmanStore = create<RepairmanState>((set, get) => ({
-  difficulty: 'easy',
-  ...createBoard('easy'),
-  setDifficulty: (difficulty) => set({ difficulty, ...createBoard(difficulty) }),
-  reset: () => set(createBoard(get().difficulty)),
+  ...createSession(STAGES[0].id, 'easy'),
+  openStage: (stageId) => set(createSession(stageId, 'easy')),
+  setDifficulty: (difficulty) => set(createSession(get().stageId, difficulty)),
+  reset: () => set(createSession(get().stageId, get().difficulty)),
   snap: (id) =>
     set((state) => ({
       placed: { ...state.placed, [id]: true },
