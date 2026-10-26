@@ -1,7 +1,7 @@
 import Matter from 'matter-js';
 
 import { piecePolygon } from './shapes';
-import { BoardSize, Piece, Point } from './types';
+import { BoardSize, Pedestal, Piece, Point } from './types';
 
 const { Bodies, Body, Composite, Engine, Sleeping, Vertices } = Matter;
 
@@ -63,20 +63,28 @@ function buildEntry(piece: Piece, flipped: boolean): PhysicsEntry {
 export function createWorld(
   pieces: Piece[],
   size: BoardSize,
-  initialFlips: Record<string, boolean>
+  initialFlips: Record<string, boolean>,
+  pedestal: Pedestal
 ): PhysicsWorld {
   const engine = Engine.create({
     gravity: { x: 0, y: 1, scale: 0.0016 },
-    enableSleeping: true,
-    positionIterations: 14,
-    velocityIterations: 12,
+    enableSleeping: false,
+    positionIterations: 16,
+    velocityIterations: 14,
     constraintIterations: 4
   });
 
   Composite.add(engine.world, [
     Bodies.rectangle(size.width / 2, size.height + 40, size.width * 2, 80, WALL),
     Bodies.rectangle(-40, size.height / 2, 80, size.height * 4, WALL),
-    Bodies.rectangle(size.width + 40, size.height / 2, 80, size.height * 4, WALL)
+    Bodies.rectangle(size.width + 40, size.height / 2, 80, size.height * 4, WALL),
+    Bodies.rectangle(
+      pedestal.x + pedestal.width / 2,
+      pedestal.y + pedestal.height / 2 + 6,
+      pedestal.width,
+      pedestal.height + 12,
+      WALL
+    )
   ]);
 
   const entries: Record<string, PhysicsEntry> = {};
@@ -159,6 +167,16 @@ export function setBodyFlipped(world: PhysicsWorld, piece: Piece, flipped: boole
 
   Composite.add(world.engine.world, next.body);
   world.entries[piece.id] = next;
+}
+
+export function grabBody(world: PhysicsWorld, id: string) {
+  const entry = world.entries[id];
+
+  if (!entry) {
+    return;
+  }
+
+  Body.setStatic(entry.body, true);
 }
 
 export function holdBody(world: PhysicsWorld, id: string, centerX: number, centerY: number) {

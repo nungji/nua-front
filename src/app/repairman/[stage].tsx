@@ -11,6 +11,7 @@ import { PieceGraphic } from '@/components/PieceGraphic';
 import { pickPiece } from '@/game/hit';
 import {
   createWorld,
+  grabBody,
   holdBody,
   placeBody,
   releaseBody,
@@ -25,7 +26,7 @@ import { Piece } from '@/game/types';
 import { useRepairmanStore } from '@/store/useRepairmanStore';
 
 const FIXED_STEP = 16.666;
-const FLIP_HOLD = 600;
+const FLIP_HOLD = 200;
 
 export default function RepairmanStage() {
   const params = useLocalSearchParams<{ stage?: string }>();
@@ -34,8 +35,8 @@ export default function RepairmanStage() {
 
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const size = useMemo(() => {
-    const width = Math.min(windowWidth - 24, 440);
-    const height = Math.max(440, Math.min(windowHeight - 210, width * 1.65));
+    const width = Math.min(windowWidth - 16, 460);
+    const height = Math.max(272, Math.min(windowHeight - 200, Math.round(width * 0.72)));
 
     return { width, height };
   }, [windowWidth, windowHeight]);
@@ -128,12 +129,13 @@ export default function RepairmanStage() {
   }, [turns, flipped, pieces, hits]);
 
   useEffect(() => {
-    const world = createWorld(pieces, size, flippedRef.current);
+    const world = createWorld(pieces, size, flippedRef.current, puzzle.pedestal);
     worldRef.current = world;
     const frozen = new Set<string>();
     let frame = 0;
     let last = Date.now();
     let accumulator = 0;
+    let lastActive = -1;
 
     const loop = () => {
       const now = Date.now();
@@ -155,6 +157,14 @@ export default function RepairmanStage() {
       }
 
       const active = activeIndex.value;
+
+      if (active !== lastActive) {
+        if (active >= 0 && active < pieces.length && !placedRef.current[pieces[active].id]) {
+          grabBody(world, pieces[active].id);
+        }
+
+        lastActive = active;
+      }
 
       if (active >= 0 && active < pieces.length && !placedRef.current[pieces[active].id]) {
         holdBody(world, pieces[active].id, touchX.value - grabDX.value, touchY.value - grabDY.value);
@@ -185,26 +195,21 @@ export default function RepairmanStage() {
         }
       });
 
-      const awake = active >= 0 || pieces.some((piece) => !world.entries[piece.id].body.isSleeping);
+      const next = hits.value.slice();
 
-      if (awake) {
-        const next = hits.value.slice();
+      pieces.forEach((piece, index) => {
+        if (placedRef.current[piece.id]) {
+          next[index * 4] = piece.slot.x + piece.width / 2;
+          next[index * 4 + 1] = piece.slot.y + piece.height / 2;
+          return;
+        }
 
-        pieces.forEach((piece, index) => {
-          if (placedRef.current[piece.id]) {
-            next[index * 4] = piece.slot.x + piece.width / 2;
-            next[index * 4 + 1] = piece.slot.y + piece.height / 2;
-            return;
-          }
+        const center = visualCenter(world, piece.id);
+        next[index * 4] = center.x;
+        next[index * 4 + 1] = center.y;
+      });
 
-          const center = visualCenter(world, piece.id);
-          next[index * 4] = center.x;
-          next[index * 4 + 1] = center.y;
-        });
-
-        hits.value = next;
-      }
-
+      hits.value = next;
       frame = requestAnimationFrame(loop);
     };
 
@@ -214,7 +219,7 @@ export default function RepairmanStage() {
       cancelAnimationFrame(frame);
       worldRef.current = null;
     };
-  }, [pieces, size, hits, activeIndex, touchX, touchY, grabDX, grabDY]);
+  }, [pieces, size, puzzle.pedestal, hits, activeIndex, touchX, touchY, grabDX, grabDY]);
 
   const finishDrag = useCallback(
     (index: number, centerX: number, centerY: number) => {
@@ -347,7 +352,7 @@ export default function RepairmanStage() {
     });
 
   const tap = Gesture.Tap()
-    .maxDuration(320)
+    .maxDuration(190)
     .onEnd((event) => {
       const index = pickPiece(hits.value, shapes, sizes, event.x, event.y);
 
@@ -362,13 +367,13 @@ export default function RepairmanStage() {
     <SafeAreaView className="flex-1 bg-white">
       <View className="flex-row items-center justify-between px-5 pt-2">
         <Pressable onPress={() => router.back()} hitSlop={16}>
-          <Text className="text-base text-gray-500">나가기</Text>
+          <Text className="text-lg text-gray-500">나가기</Text>
         </Pressable>
-        <Text className="text-base font-semibold text-gray-900">
+        <Text className="text-xl font-semibold text-gray-900">
           {stage.id}. {puzzle.stageName}
         </Text>
         <Pressable onPress={reset} hitSlop={16}>
-          <Text className="text-base text-gray-500">다시</Text>
+          <Text className="text-lg text-gray-500">다시</Text>
         </Pressable>
       </View>
 
@@ -379,7 +384,7 @@ export default function RepairmanStage() {
             style={{
               width: size.width,
               height: size.height,
-              borderWidth: completed ? 3 : 0,
+              borderWidth: completed ? 4 : 0,
               borderColor: '#F05A28'
             }}
           >
@@ -389,19 +394,38 @@ export default function RepairmanStage() {
                 ))
               : null}
 
-            {puzzle.slots ? (
-              pieces.map((piece) => <Slot key={piece.id} piece={piece} />)
-            ) : (
-              <Svg width={size.width} height={size.height} style={{ position: 'absolute' }}>
-                <Path
-                  d={puzzle.silhouette}
-                  fill="none"
-                  stroke="#94A3B8"
-                  strokeWidth={2}
-                  strokeDasharray="7 6"
-                />
-              </Svg>
-            )}
+            {puzzle.slots
+              ? pieces.map((piece) => <Slot key={piece.id} piece={piece} />)
+              : (
+                <Svg width={size.width} height={size.height} style={{ position: 'absolute' }}>
+                  <Path
+                    d={puzzle.silhouette}
+                    fill="none"
+                    stroke="#94A3B8"
+                    strokeWidth={2}
+                    strokeDasharray="7 6"
+                  />
+                </Svg>
+              )}
+
+            {!puzzle.slots
+              ? pieces.map((piece) =>
+                  piece.overlaps ? (
+                    <Ghost key={'hint' + piece.id} piece={piece} fill="#F05A28" opacity={0.24} />
+                  ) : null
+                )
+              : null}
+
+            <View
+              style={{
+                position: 'absolute',
+                left: puzzle.pedestal.x,
+                top: puzzle.pedestal.y,
+                width: puzzle.pedestal.width,
+                height: puzzle.pedestal.height
+              }}
+              className="rounded-md bg-slate-300"
+            />
 
             {pieces.map((piece, index) => (
               <GamePiece
@@ -424,19 +448,19 @@ export default function RepairmanStage() {
       </View>
 
       <View className="items-center pb-5">
-        <Text className="text-sm text-gray-500">
+        <Text className="text-base text-gray-500">
           놓은 조각 {placedCount}/{pieces.length} · 시도 {snaps + misses}
         </Text>
         {completed ? (
-          <Text className="mt-1 text-2xl font-bold text-orange-500">완성!</Text>
+          <Text className="mt-1 text-3xl font-bold text-orange-500">완성!</Text>
         ) : (
-          <Text className="mt-1 text-sm text-gray-400">
+          <Text className="mt-1 text-base text-gray-400">
             {stage.rotate && stage.flip
-              ? '탭=돌리기 · 길게=뒤집기'
+              ? '탭=돌리기 · 200ms 누르면 뒤집기'
               : stage.rotate
-                ? '탭=돌리기'
+                ? '탭해서 돌려 보세요'
                 : stage.flip
-                  ? '길게=뒤집기'
+                  ? '200ms 누르면 뒤집혀요'
                   : '모양을 보고 맞춰 보세요'}
           </Text>
         )}
