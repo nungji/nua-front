@@ -1,25 +1,48 @@
 import { router } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Path, Svg } from 'react-native-svg';
 
-import { STAGES } from '@/game/stages';
-import { Difficulty } from '@/game/types';
+import { buildPuzzle, STAGES, stageHint } from '@/game/stages';
+import { StageConfig } from '@/game/types';
 
-const LEVELS: Difficulty[] = ['easy', 'medium', 'hard'];
+const PREVIEW_BOARD = { width: 400, height: 600 };
 
-function pieceCounts(stageId: string) {
-  const stage = STAGES.find((item) => item.id === stageId);
+type Preview = {
+  path: string;
+  viewBox: string;
+};
 
-  if (!stage) {
-    return [];
-  }
+function buildPreview(stage: StageConfig): Preview {
+  const puzzle = buildPuzzle(stage, PREVIEW_BOARD);
+  const minX = Math.min(...puzzle.pieces.map((piece) => piece.slot.x));
+  const maxX = Math.max(...puzzle.pieces.map((piece) => piece.slot.x + piece.width));
+  const minY = Math.min(...puzzle.pieces.map((piece) => piece.slot.y));
+  const maxY = Math.max(...puzzle.pieces.map((piece) => piece.slot.y + piece.height));
+  const padding = 8;
 
-  return LEVELS.map(
-    (_, rank) => stage.parts.filter((part) => LEVELS.indexOf(part.from) <= rank).length
-  );
+  return {
+    path: puzzle.silhouette,
+    viewBox: `${minX - padding} ${minY - padding} ${maxX - minX + padding * 2} ${maxY - minY + padding * 2}`
+  };
 }
 
 export default function RepairmanStages() {
+  const [selected, setSelected] = useState<number | null>(null);
+  const previews = useMemo(() => {
+    const map: Record<number, Preview> = {};
+
+    for (const stage of STAGES) {
+      map[stage.id] = buildPreview(stage);
+    }
+
+    return map;
+  }, []);
+
+  const stage = selected === null ? null : STAGES.find((item) => item.id === selected) ?? null;
+
   return (
     <SafeAreaView className="flex-1 bg-white">
       <View className="flex-row items-center justify-between px-5 pt-2">
@@ -30,24 +53,86 @@ export default function RepairmanStages() {
         <View style={{ width: 40 }} />
       </View>
 
-      <View className="gap-3 px-5 pt-6">
-        {STAGES.map((stage) => {
-          const counts = pieceCounts(stage.id);
+      <View className="px-5 pt-6">
+        <Text className="text-2xl font-bold text-gray-900">스테이지</Text>
+        <Text className="mt-1 text-sm text-gray-500">고칠 물건을 골라 주세요</Text>
+      </View>
+
+      <View className="flex-row flex-wrap px-5 pt-5" style={{ gap: 12 }}>
+        {STAGES.map((item) => {
+          const active = item.id === selected;
 
           return (
             <Pressable
-              key={stage.id}
-              onPress={() => router.push(`/repairman/${stage.id}`)}
-              className="rounded-2xl border border-slate-200 bg-white px-5 py-4"
+              key={item.id}
+              onPress={() => setSelected(item.id)}
+              style={{ width: 56, height: 56 }}
+              className={
+                active
+                  ? 'items-center justify-center rounded-2xl bg-orange-500'
+                  : 'items-center justify-center rounded-2xl bg-slate-100'
+              }
             >
-              <Text className="text-lg font-bold text-gray-900">{stage.name}</Text>
-              <Text className="mt-1 text-sm text-gray-500">
-                조각 {counts.join(' · ')} (하 · 중 · 상)
+              <Text
+                className={
+                  active ? 'text-lg font-bold text-white' : 'text-lg font-semibold text-slate-600'
+                }
+              >
+                {item.id}
               </Text>
             </Pressable>
           );
         })}
       </View>
+
+      <View className="flex-1" />
+
+      {stage ? (
+        <Animated.View
+          key={stage.id}
+          entering={SlideInDown.duration(220)}
+          exiting={SlideOutDown.duration(160)}
+          className="absolute bottom-0 left-0 right-0 border-t border-slate-200 bg-white px-5 pb-8 pt-4"
+        >
+          <View className="flex-row items-center" style={{ gap: 16 }}>
+            <View className="items-center justify-center rounded-2xl bg-slate-50" style={{ width: 92, height: 108 }}>
+              <Svg width={80} height={96} viewBox={previews[stage.id].viewBox}>
+                <Path
+                  d={previews[stage.id].path}
+                  fill="#E2E8F0"
+                  stroke="#94A3B8"
+                  strokeWidth={2}
+                />
+              </Svg>
+            </View>
+
+            <View className="flex-1">
+              <Text className="text-lg font-bold text-gray-900">
+                {stage.id}. {stage.name}
+              </Text>
+              <Text className="mt-1 text-sm text-gray-500">{stageHint(stage)}</Text>
+
+              <View className="mt-3 flex-row items-center" style={{ gap: 4 }}>
+                {STAGES.map((item) => (
+                  <View
+                    key={item.id}
+                    className={item.id <= stage.id ? 'h-1.5 flex-1 rounded-full bg-orange-400' : 'h-1.5 flex-1 rounded-full bg-slate-200'}
+                  />
+                ))}
+              </View>
+              <Text className="mt-1 text-xs text-gray-400">난이도 {stage.id} / {STAGES.length}</Text>
+            </View>
+
+            <Pressable
+              onPress={() => router.push(`/repairman/${stage.id}`)}
+              className="items-center justify-center rounded-full bg-orange-500"
+              style={{ width: 60, height: 60 }}
+            >
+              <Text className="text-xl font-bold text-white">▶</Text>
+            </Pressable>
+          </View>
+        </Animated.View>
+      ) : null}
     </SafeAreaView>
   );
 }

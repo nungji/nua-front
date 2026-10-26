@@ -1,18 +1,15 @@
 import { create } from 'zustand';
 
-import { buildPuzzle, STAGES } from '@/game/stages';
-import { Difficulty, Piece } from '@/game/types';
+import { findStage, initialPieces, STAGES } from '@/game/stages';
 
 type RepairmanState = {
-  stageId: string;
-  difficulty: Difficulty;
+  stageId: number;
   placed: Record<string, boolean>;
   turns: Record<string, number>;
   flipped: Record<string, boolean>;
   snaps: number;
   misses: number;
-  openStage: (stageId: string) => void;
-  setDifficulty: (difficulty: Difficulty) => void;
+  openStage: (stageId: number) => void;
   reset: () => void;
   snap: (id: string) => void;
   unsnap: (id: string) => void;
@@ -21,32 +18,25 @@ type RepairmanState = {
   miss: () => void;
 };
 
-function fill<T>(pieces: Piece[], pick: (piece: Piece) => T): Record<string, T> {
-  return pieces.reduce<Record<string, T>>(
-    (accumulator, piece) => ({ ...accumulator, [piece.id]: pick(piece) }),
-    {} as Record<string, T>
-  );
-}
+function createSession(stageId: number) {
+  const pieces = initialPieces(findStage(stageId));
+  const placed: Record<string, boolean> = {};
+  const turns: Record<string, number> = {};
+  const flipped: Record<string, boolean> = {};
 
-function createSession(stageId: string, difficulty: Difficulty) {
-  const { pieces } = buildPuzzle(stageId, difficulty);
+  for (const piece of pieces) {
+    placed[piece.id] = false;
+    turns[piece.id] = piece.initialTurns;
+    flipped[piece.id] = piece.initialFlipped;
+  }
 
-  return {
-    stageId,
-    difficulty,
-    placed: fill(pieces, () => false),
-    turns: fill(pieces, (piece) => piece.initialTurns),
-    flipped: fill(pieces, (piece) => piece.initialFlipped),
-    snaps: 0,
-    misses: 0
-  };
+  return { stageId, placed, turns, flipped, snaps: 0, misses: 0 };
 }
 
 export const useRepairmanStore = create<RepairmanState>((set, get) => ({
-  ...createSession(STAGES[0].id, 'easy'),
-  openStage: (stageId) => set(createSession(stageId, 'easy')),
-  setDifficulty: (difficulty) => set(createSession(get().stageId, difficulty)),
-  reset: () => set(createSession(get().stageId, get().difficulty)),
+  ...createSession(STAGES[0].id),
+  openStage: (stageId) => set(createSession(stageId)),
+  reset: () => set(createSession(get().stageId)),
   snap: (id) =>
     set((state) => ({
       placed: { ...state.placed, [id]: true },

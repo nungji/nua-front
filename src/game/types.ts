@@ -1,5 +1,3 @@
-export type Difficulty = 'easy' | 'medium' | 'hard';
-
 export type PieceShape = 'rect' | 'circle' | 'semicircle';
 
 export type ConnectorKind = 'tab' | 'socket';
@@ -28,22 +26,20 @@ export type PartSpec = {
   shape: PieceShape;
   width: number;
   height: number;
-  tone?: string;
-  color?: string;
   slot: Point;
   chamfers?: Chamfers;
-  overlapShape?: { shape: PieceShape; width: number; height: number };
-  edges?: Partial<PieceEdges>;
   requires?: string;
-  from: Difficulty;
-  overlapShift?: Point;
 };
 
-export type Stage = {
-  id: string;
+export type StageConfig = {
+  id: number;
   name: string;
   parts: PartSpec[];
-  offsetX?: number;
+  slots: boolean;
+  connectors: boolean;
+  rotate: boolean;
+  flip: boolean;
+  dependency: boolean;
 };
 
 export type Piece = {
@@ -62,10 +58,17 @@ export type Piece = {
   initialFlipped: boolean;
 };
 
+export type BoardSize = {
+  width: number;
+  height: number;
+};
+
 export type Puzzle = {
-  stageId: string;
+  stageId: number;
   stageName: string;
-  difficulty: Difficulty;
   pieces: Piece[];
   silhouette: string;
+  slots: boolean;
+  rotate: boolean;
+  flip: boolean;
 };

@@ -3,12 +3,11 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import type { SharedValue } from 'react-native-reanimated';
 
 import { PieceGraphic } from '@/components/PieceGraphic';
-import { PIECE_PAD } from '@/game/stages';
-import { Piece, PieceEdges } from '@/game/types';
+import { PIECE_PAD, tiltFor } from '@/game/stages';
+import { Piece } from '@/game/types';
 
 type GamePieceProps = {
   piece: Piece;
-  edges: PieceEdges;
   index: number;
   placed: boolean;
   turns: number;
@@ -23,7 +22,6 @@ type GamePieceProps = {
 
 export function GamePiece({
   piece,
-  edges,
   index,
   placed,
   turns,
@@ -35,7 +33,7 @@ export function GamePiece({
   grabDX,
   grabDY
 }: GamePieceProps) {
-  const tilt = ((index * 37) % 9) - 4;
+  const tilt = tiltFor(index);
   const centerX = piece.start.x + piece.width / 2;
   const centerY = piece.start.y + piece.height / 2;
   const slotCenterX = piece.slot.x + piece.width / 2;
@@ -133,7 +131,7 @@ export function GamePiece({
     >
       <PieceGraphic
         piece={piece}
-        edges={edges}
+        edges={piece.edges}
         fill={placed ? piece.color : piece.tone}
         stroke="#FFFFFF"
         strokeWidth={1.5}
