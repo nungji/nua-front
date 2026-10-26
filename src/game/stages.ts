@@ -1,9 +1,11 @@
 import { buildSilhouettePath } from './silhouette';
+import { SHAPES, ShapeId } from './shapeset';
 import { shiftedPolygon } from './shapes';
 import {
   BoardSize,
   Chamfers,
   PartSpec,
+  Pedestal,
   Piece,
   PieceEdges,
   Puzzle,
@@ -11,147 +13,218 @@ import {
 } from './types';
 
 export const PIECE_PAD = 10;
-
-export function tiltFor(index: number) {
-  return ((index * 37) % 9) - 4;
-}
-export const SNAP_RADIUS = 52;
-
-const NO_CHAMFERS: Chamfers = [0, 0, 0, 0];
+export const SNAP_RADIUS = 56;
+export const PEDESTAL_HEIGHT = 26;
 
 const TONES = ['#C9C2B6', '#9FB4D6', '#E3A9A0', '#A3C2B0', '#B5AECD', '#D8C89A', '#AEB7C4', '#CBB6C9', '#A9C6C6'];
 const COLORS = ['#F05A28', '#2F6FED', '#E5553F', '#3D3D4E', '#6B4FA8', '#E0A400', '#2B7A5E', '#B03A6B', '#1F7A8C'];
 const INITIAL_TURNS = [3, 2, 1, 2, 3, 1, 2, 3, 1];
 const INITIAL_FLIPS = [true, false, false, true, false, false, true, false, true];
 
-const FLOOR_MARGIN = 14;
-const FLOOR_GAP = 8;
+const FLOOR_MARGIN = 10;
+const FLOOR_GAP = 7;
+const TOP_MARGIN = 8;
 
-function box(
-  id: string,
-  width: number,
-  height: number,
-  x: number,
-  y: number,
-  chamfers: Chamfers = NO_CHAMFERS
-): PartSpec {
-  return { id, shape: 'rect', width, height, slot: { x, y }, chamfers };
+function part(id: string, shape: ShapeId, x: number, y: number): PartSpec {
+  return { id, shape, slot: { x, y } };
 }
 
-function dome(id: string, diameter: number, x: number, y: number): PartSpec {
-  return { id, shape: 'semicircle', width: diameter, height: diameter / 2, slot: { x, y } };
-}
-
-function disc(id: string, diameter: number, x: number, y: number): PartSpec {
-  return { id, shape: 'circle', width: diameter, height: diameter, slot: { x, y } };
-}
+const BOOK: PartSpec[] = [
+  part('cover', 'bookCover', 0, 60),
+  part('spine', 'bookSpine', 0, 70),
+  part('pages', 'bookPages', 10, 70)
+];
 
 const CUP: PartSpec[] = [
-  box('saucer', 96, 12, 0, 138, [8, 8, 0, 0]),
-  box('cup', 64, 66, 16, 72, [0, 0, 14, 0]),
-  box('lid', 64, 10, 16, 62, [10, 10, 0, 0]),
-  box('handle', 22, 30, 80, 94, [0, 10, 10, 0])
+  part('lid', 'cupLid', 16, 66),
+  part('cup', 'cupBody', 16, 76),
+  part('handle', 'cupHandle', 80, 94),
+  part('saucer', 'cupSaucer', 0, 138)
 ];
 
 const CHAIR: PartSpec[] = [
-  box('rail', 84, 10, 8, 60, [6, 6, 0, 0]),
-  box('back', 84, 50, 8, 70, [0, 0, 0, 0]),
-  box('seat', 84, 14, 8, 120, [8, 0, 0, 0]),
-  box('legLeft', 14, 46, 14, 134, [0, 0, 0, 4]),
-  box('legRight', 14, 46, 72, 134, [0, 0, 4, 0])
+  part('rail', 'chairRail', 8, 60),
+  part('back', 'chairBack', 8, 70),
+  part('seat', 'chairSeat', 8, 120),
+  part('legLeft', 'chairLegLeft', 14, 134),
+  part('legRight', 'chairLegRight', 72, 134)
+];
+
+const DOOR: PartSpec[] = [
+  part('lintel', 'doorLintel', 0, 50),
+  part('trimLeft', 'doorTrimLeft', 0, 62),
+  part('panel', 'doorPanel', 10, 62),
+  part('trimRight', 'doorTrimRight', 80, 62),
+  part('sill', 'doorSill', 0, 152)
+];
+
+const PENCIL: PartSpec[] = [
+  part('tip', 'pencilTip', 0, 60),
+  part('body', 'pencilBody', 22, 60),
+  part('eraser', 'pencilEraser', 130, 61)
 ];
 
 const CAR: PartSpec[] = [
-  box('cabin', 80, 46, 55, 74, [0, 18, 0, 0]),
-  box('chassis', 170, 50, 15, 120, [16, 0, 0, 0]),
-  box('bumper', 15, 20, 0, 140, [6, 0, 0, 0]),
-  dome('wheelFront', 48, 35, 170),
-  dome('wheelRear', 48, 117, 170)
+  part('cabin', 'carCabin', 50, 76),
+  part('chassis', 'carChassis', 15, 120),
+  part('bumper', 'carBumper', 1, 140),
+  part('wheelFront', 'carWheelFront', 30, 166),
+  part('wheelRear', 'carWheelRear', 110, 166)
 ];
 
 const PLANE: PartSpec[] = [
-  box('tail', 20, 40, 16, 70, [8, 0, 0, 0]),
-  box('windshield', 24, 20, 50, 90, [0, 8, 0, 0]),
-  box('fuselage', 190, 36, 10, 110, [0, 18, 0, 0]),
-  box('wing', 120, 24, 45, 146, [12, 0, 0, 0]),
-  dome('wheelLeft', 34, 60, 170),
-  dome('wheelRight', 34, 130, 170)
+  part('tail', 'planeTail', 14, 72),
+  part('windshield', 'planeWindshield', 46, 92),
+  part('fuselage', 'planeFuselage', 8, 110),
+  part('wing', 'planeWing', 40, 144),
+  part('wheelMain', 'planeWheelMain', 52, 166),
+  part('wheelNose', 'planeWheelNose', 118, 169)
 ];
 
 const TRAIN: PartSpec[] = [
-  box('chimney', 24, 42, 44, 58, [8, 0, 0, 0]),
-  box('cab', 64, 64, 136, 36, [0, 22, 0, 0]),
-  box('lamp', 20, 20, 96, 80, [6, 0, 0, 0]),
-  box('body', 180, 70, 20, 100, [30, 0, 0, 0]),
-  disc('wheelLeft', 52, 44, 144),
-  disc('wheelRight', 52, 130, 144)
+  part('chimney', 'trainChimney', 38, 60),
+  part('cab', 'trainCab', 120, 40),
+  part('body', 'trainBody', 16, 100),
+  part('wheelLeft', 'trainWheelLeft', 38, 142),
+  part('wheelRight', 'trainWheelRight', 116, 144)
 ];
 
 const DESK: PartSpec[] = [
-  box('top', 160, 12, 10, 110, [12, 0, 0, 0]),
-  box('legLeft', 12, 50, 10, 122, [0, 0, 0, 4]),
-  box('drawer', 86, 30, 47, 122, [0, 0, 6, 0]),
-  box('divider', 10, 30, 133, 122, [0, 0, 4, 0]),
-  box('legRight', 12, 50, 158, 122, [0, 0, 4, 0]),
-  box('shelf', 60, 8, 93, 152, [0, 6, 0, 0])
+  part('top', 'deskTop', 5, 110),
+  part('legLeft', 'deskLegLeft', 5, 122),
+  part('drawer', 'deskDrawer', 40, 122),
+  part('divider', 'deskDivider', 122, 122),
+  part('legRight', 'deskLegRight', 146, 122),
+  part('shelf', 'deskShelf', 84, 150)
 ];
 
 const ROBOT: PartSpec[] = [
-  box('antenna', 8, 18, 61, 42, [0, 4, 0, 0]),
-  box('head', 46, 40, 42, 60, [8, 8, 0, 0]),
-  box('armLeft', 16, 50, 14, 106, [0, 0, 6, 0]),
-  box('armRight', 16, 50, 100, 106, [0, 0, 0, 6]),
-  box('torso', 70, 70, 30, 100, [0, 10, 0, 0]),
-  box('legLeft', 20, 36, 38, 170, [0, 0, 0, 6]),
-  box('legRight', 20, 36, 72, 170, [0, 0, 6, 0])
+  part('antenna', 'robotAntenna', 56, 44),
+  part('head', 'robotHead', 40, 60),
+  part('armLeft', 'robotArmLeft', 14, 104),
+  part('armRight', 'robotArmRight', 94, 104),
+  part('torso', 'robotTorso', 28, 100),
+  part('legLeft', 'robotLegLeft', 34, 166),
+  part('legRight', 'robotLegRight', 68, 166)
+];
+
+const CLOCK: PartSpec[] = [
+  part('knob', 'clockKnob', 64, 38),
+  part('face', 'clockFace', 25, 44),
+  part('pendulum', 'clockPendulum', 68, 138),
+  part('base', 'clockBase', 35, 172)
 ];
 
 const TRUCK: PartSpec[] = [
-  box('container', 120, 66, 0, 70, [10, 0, 0, 0]),
-  box('exhaust', 10, 30, 124, 46, [0, 4, 0, 0]),
-  box('cab', 60, 60, 120, 76, [0, 16, 0, 0]),
-  box('chassis', 180, 16, 0, 136, [10, 0, 0, 0]),
-  box('bumper', 16, 18, 180, 140, [0, 6, 0, 0]),
-  disc('wheelFront', 44, 24, 120),
-  disc('wheelMiddle', 44, 86, 120),
-  disc('wheelRear', 44, 130, 120)
+  part('container', 'truckContainer', 0, 74),
+  part('cab', 'truckCab', 108, 80),
+  part('chassis', 'truckChassis', 0, 136),
+  part('wheelFront', 'truckWheelFront', 22, 120),
+  part('wheelMiddle', 'truckWheelMiddle', 78, 122),
+  part('wheelRear', 'truckWheelRear', 120, 124)
 ];
 
 const HOUSE: PartSpec[] = [
-  box('chimney', 22, 30, 96, 50, [0, 8, 0, 0]),
-  box('roof', 140, 44, 10, 66, [30, 30, 0, 0]),
-  box('wall', 120, 80, 20, 110, [16, 0, 0, 0]),
-  box('fenceLeft', 30, 40, 0, 190, [0, 6, 0, 0]),
-  box('door', 30, 40, 44, 190, [8, 0, 0, 0]),
-  box('window', 26, 26, 96, 190, [0, 6, 0, 0]),
-  box('fenceRight', 30, 40, 130, 190, [0, 0, 0, 6]),
-  box('step', 40, 10, 39, 230, [0, 6, 0, 0])
+  part('chimney', 'houseChimney', 84, 54),
+  part('roof', 'houseRoof', 10, 70),
+  part('wall', 'houseWall', 20, 112),
+  part('fenceLeft', 'houseFenceLeft', 0, 186),
+  part('door', 'houseDoor', 40, 186),
+  part('window', 'houseWindow', 88, 186),
+  part('fenceRight', 'houseFenceRight', 120, 186)
+];
+
+const FAN: PartSpec[] = [
+  part('head', 'fanHead', 43, 54),
+  part('pole', 'fanPole', 69, 118),
+  part('button', 'fanButton', 50, 170),
+  part('base', 'fanBase', 37, 178)
+];
+
+const BED: PartSpec[] = [
+  part('headboard', 'bedHeadboard', 0, 96),
+  part('blanket', 'bedBlanket', 72, 114),
+  part('pillow', 'bedPillow', 26, 118),
+  part('mattress', 'bedMattress', 22, 134),
+  part('legLeft', 'bedLegLeft', 30, 162),
+  part('legRight', 'bedLegRight', 128, 162)
 ];
 
 const ROCKET: PartSpec[] = [
-  box('antenna', 8, 20, 76, 24, [4, 0, 0, 0]),
-  box('nose', 56, 36, 52, 44, [22, 22, 0, 0]),
-  box('body', 56, 110, 52, 80, [0, 10, 0, 0]),
-  box('boosterLeft', 20, 60, 32, 130, [0, 0, 8, 0]),
-  box('boosterRight', 20, 60, 108, 130, [0, 0, 0, 8]),
-  box('finLeft', 18, 46, 34, 144, [0, 0, 10, 0]),
-  box('finRight', 18, 46, 108, 144, [0, 0, 0, 10]),
-  box('window', 24, 24, 68, 96, [0, 8, 8, 0]),
-  box('hatch', 26, 18, 67, 150, [0, 0, 0, 6])
+  part('antenna', 'rocketAntenna', 70, 26),
+  part('nose', 'rocketNose', 48, 44),
+  part('body', 'rocketBody', 48, 78),
+  part('window', 'rocketWindow', 63, 92),
+  part('boosterLeft', 'rocketBoosterLeft', 30, 126),
+  part('boosterRight', 'rocketBoosterRight', 100, 126),
+  part('finLeft', 'rocketFinLeft', 32, 140),
+  part('finRight', 'rocketFinRight', 102, 140)
+];
+
+const SOFA: PartSpec[] = [
+  part('armLeft', 'sofaArmLeft', 0, 104),
+  part('back', 'sofaBack', 13, 110),
+  part('armRight', 'sofaArmRight', 133, 104),
+  part('seat', 'sofaSeat', 13, 164)
+];
+
+const PIANO: PartSpec[] = [
+  part('lid', 'pianoLid', 0, 100),
+  part('body', 'pianoBody', 5, 110),
+  part('keys', 'pianoKeys', 15, 160),
+  part('legLeft', 'pianoLegLeft', 10, 174),
+  part('legRight', 'pianoLegRight', 128, 174),
+  part('pedal', 'pianoPedal', 60, 186)
+];
+
+const CRANE: PartSpec[] = [
+  part('counter', 'craneCounter', 0, 74),
+  part('arm', 'craneArm', 20, 76),
+  part('cable', 'craneCable', 120, 90),
+  part('mast', 'craneMast', 20, 90),
+  part('hook', 'craneHook', 115, 130),
+  part('load', 'craneLoad', 106, 142),
+  part('base', 'craneBase', 0, 200)
+];
+
+const CASTLE: PartSpec[] = [
+  part('pole', 'castlePole', 76, 70),
+  part('flag', 'castleFlag', 82, 70),
+  part('keep', 'castleKeep', 60, 100),
+  part('roofLeft', 'castleRoofLeft', 0, 104),
+  part('roofRight', 'castleRoofRight', 130, 106),
+  part('towerLeft', 'castleTowerLeft', 0, 120),
+  part('towerRight', 'castleTowerRight', 130, 120),
+  part('wall', 'castleWall', 30, 140),
+  part('gate', 'castleGate', 66, 166)
 ];
 
 export const STAGES: StageConfig[] = [
-  { id: 1, name: '컵', parts: CUP, slots: true, connectors: true, rotate: false, flip: false, dependency: false },
-  { id: 2, name: '의자', parts: CHAIR, slots: true, connectors: true, rotate: false, flip: false, dependency: false },
-  { id: 3, name: '자동차', parts: CAR, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
-  { id: 4, name: '비행기', parts: PLANE, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
-  { id: 5, name: '기차', parts: TRAIN, slots: false, connectors: false, rotate: true, flip: false, dependency: false },
-  { id: 6, name: '책상', parts: DESK, slots: false, connectors: false, rotate: true, flip: false, dependency: false },
-  { id: 7, name: '로봇', parts: ROBOT, slots: false, connectors: false, rotate: false, flip: true, dependency: false },
-  { id: 8, name: '트럭', parts: TRUCK, slots: false, connectors: false, rotate: false, flip: true, dependency: false },
-  { id: 9, name: '집', parts: HOUSE, slots: false, connectors: false, rotate: true, flip: false, dependency: false },
-  { id: 10, name: '우주선', parts: ROCKET, slots: false, connectors: false, rotate: true, flip: true, dependency: true }
+  { id: 1, name: '책', parts: BOOK, slots: true, connectors: true, rotate: false, flip: false, dependency: false },
+  { id: 2, name: '컵', parts: CUP, slots: true, connectors: true, rotate: false, flip: false, dependency: false },
+  { id: 3, name: '의자', parts: CHAIR, slots: true, connectors: true, rotate: false, flip: false, dependency: false },
+  { id: 4, name: '문', parts: DOOR, slots: true, connectors: true, rotate: false, flip: false, dependency: false },
+  { id: 5, name: '연필', parts: PENCIL, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
+  { id: 6, name: '자동차', parts: CAR, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
+  { id: 7, name: '비행기', parts: PLANE, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
+  { id: 8, name: '기차', parts: TRAIN, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
+  { id: 9, name: '책상', parts: DESK, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
+  { id: 10, name: '로봇', parts: ROBOT, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
+  { id: 11, name: '시계', parts: CLOCK, slots: false, connectors: false, rotate: true, flip: false, dependency: false },
+  { id: 12, name: '트럭', parts: TRUCK, slots: false, connectors: false, rotate: true, flip: false, dependency: false },
+  { id: 13, name: '집', parts: HOUSE, slots: false, connectors: false, rotate: true, flip: false, dependency: false },
+  { id: 14, name: '선풍기', parts: FAN, slots: false, connectors: false, rotate: false, flip: true, dependency: false },
+  { id: 15, name: '침대', parts: BED, slots: false, connectors: false, rotate: false, flip: true, dependency: false },
+  { id: 16, name: '우주선', parts: ROCKET, slots: false, connectors: false, rotate: false, flip: true, dependency: false },
+  { id: 17, name: '소파', parts: SOFA, slots: false, connectors: false, rotate: true, flip: true, dependency: false },
+  { id: 18, name: '피아노', parts: PIANO, slots: false, connectors: false, rotate: true, flip: true, dependency: false },
+  { id: 19, name: '크레인', parts: CRANE, slots: false, connectors: false, rotate: true, flip: true, dependency: false },
+  { id: 20, name: '성', parts: CASTLE, slots: false, connectors: false, rotate: true, flip: true, dependency: true }
 ];
+
+export function tiltFor(index: number) {
+  return ((index * 37) % 9) - 4;
+}
 
 function emptyEdges(): PieceEdges {
   return { top: [], right: [], bottom: [], left: [] };
@@ -210,13 +283,60 @@ function autoEdges(pieces: Piece[]) {
   }
 }
 
-function layoutScatter(pieces: Piece[], size: BoardSize, floorTop: number) {
+function autoRequires(pieces: Piece[]) {
+  for (const piece of pieces) {
+    let support: Piece | null = null;
+    let bestOverlap = 0;
+
+    for (const other of pieces) {
+      if (other.id === piece.id) {
+        continue;
+      }
+
+      if (Math.abs(other.slot.y + other.height - piece.slot.y) > 1) {
+        continue;
+      }
+
+      const start = Math.max(piece.slot.x, other.slot.x);
+      const end = Math.min(piece.slot.x + piece.width, other.slot.x + other.width);
+      const overlap = end - start;
+
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap;
+        support = other;
+      }
+    }
+
+    piece.requires = support ? support.id : undefined;
+  }
+}
+
+function markOverlaps(pieces: Piece[]) {
+  for (let i = 0; i < pieces.length; i += 1) {
+    for (let j = i + 1; j < pieces.length; j += 1) {
+      const first = pieces[i];
+      const second = pieces[j];
+      const overlapX =
+        Math.min(first.slot.x + first.width, second.slot.x + second.width) -
+        Math.max(first.slot.x, second.slot.x);
+      const overlapY =
+        Math.min(first.slot.y + first.height, second.slot.y + second.height) -
+        Math.max(first.slot.y, second.slot.y);
+
+      if (overlapX > 6 && overlapY > 6) {
+        second.overlaps = true;
+      }
+    }
+  }
+}
+
+function layoutScatter(pieces: Piece[], size: BoardSize, zoneWidth: number) {
   const ordered = [...pieces].sort(
     (left, right) => right.height - left.height || right.width - left.width
   );
-  const right = size.width - FLOOR_MARGIN;
+  const right = zoneWidth - FLOOR_MARGIN;
   let cursorX = FLOOR_MARGIN;
-  let cursorY = floorTop;
+  let cursorY = TOP_MARGIN;
   let rowHeight = 0;
 
   for (const piece of ordered) {
@@ -232,9 +352,13 @@ function layoutScatter(pieces: Piece[], size: BoardSize, floorTop: number) {
   }
 }
 
+export function findStage(stageId: number) {
+  return STAGES.find((stage) => stage.id === stageId) ?? STAGES[0];
+}
+
 export function initialPieces(stage: StageConfig) {
-  return stage.parts.map((part, index) => ({
-    id: part.id,
+  return stage.parts.map((part_, index) => ({
+    id: part_.id,
     initialTurns: stage.rotate ? INITIAL_TURNS[index % INITIAL_TURNS.length] : 0,
     initialFlipped: stage.flip ? INITIAL_FLIPS[index % INITIAL_FLIPS.length] : false
   }));
@@ -260,44 +384,61 @@ export function stageHint(stage: StageConfig) {
   }
 
   if (stage.dependency) {
-    features.push('부품 의존');
+    features.push('아래부터');
   }
 
   return features.join(' · ');
 }
 
-export function findStage(stageId: number) {
-  return STAGES.find((stage) => stage.id === stageId) ?? STAGES[0];
-}
-
 export function buildPuzzle(stage: StageConfig, size: BoardSize): Puzzle {
   const parts = stage.parts;
-  const minX = Math.min(...parts.map((part) => part.slot.x));
-  const maxX = Math.max(...parts.map((part) => part.slot.x + part.width));
-  const shiftX = (size.width - (maxX - minX)) / 2 - minX;
+  const pedestalTop = size.height - PEDESTAL_HEIGHT;
+  const targetX = Math.round(size.width * 0.5);
+  const targetWidth = size.width - targetX - 8;
+  const minX = Math.min(...parts.map((item) => item.slot.x));
+  const maxX = Math.max(...parts.map((item) => item.slot.x + SHAPES[item.shape].width));
+  const maxY = Math.max(...parts.map((item) => item.slot.y + SHAPES[item.shape].height));
+  const shiftX = targetX + (targetWidth - (maxX - minX)) / 2 - minX;
+  const shiftY = pedestalTop - maxY;
 
-  const pieces: Piece[] = parts.map((part, index) => ({
-    id: part.id,
-    shape: part.shape,
-    width: part.width,
-    height: part.height,
-    tone: TONES[index % TONES.length],
-    color: COLORS[index % COLORS.length],
-    start: { x: 0, y: 0 },
-    slot: { x: part.slot.x + shiftX, y: part.slot.y },
-    edges: emptyEdges(),
-    chamfers: part.chamfers ?? NO_CHAMFERS,
-    requires: stage.dependency ? part.requires : undefined,
-    initialTurns: stage.rotate ? INITIAL_TURNS[index % INITIAL_TURNS.length] : 0,
-    initialFlipped: stage.flip ? INITIAL_FLIPS[index % INITIAL_FLIPS.length] : false
-  }));
+  const pieces: Piece[] = parts.map((item, index) => {
+    const shape = SHAPES[item.shape];
+
+    return {
+      id: item.id,
+      shape: shape.kind,
+      width: shape.width,
+      height: shape.height,
+      tone: TONES[index % TONES.length],
+      color: COLORS[index % COLORS.length],
+      start: { x: 0, y: 0 },
+      slot: { x: item.slot.x + shiftX, y: item.slot.y + shiftY },
+      edges: emptyEdges(),
+      chamfers: shape.chamfers ?? [0, 0, 0, 0],
+      requires: undefined,
+      overlaps: false,
+      initialTurns: stage.rotate ? INITIAL_TURNS[index % INITIAL_TURNS.length] : 0,
+      initialFlipped: stage.flip ? INITIAL_FLIPS[index % INITIAL_FLIPS.length] : false
+    };
+  });
 
   if (stage.connectors) {
     autoEdges(pieces);
   }
 
-  const objectBottom = Math.max(...pieces.map((piece) => piece.slot.y + piece.height));
-  layoutScatter(pieces, size, objectBottom + 34);
+  if (stage.dependency) {
+    autoRequires(pieces);
+  }
+
+  markOverlaps(pieces);
+  layoutScatter(pieces, size, targetX);
+
+  const pedestal: Pedestal = {
+    x: targetX + 4,
+    y: pedestalTop,
+    width: Math.max(60, size.width - targetX - 16),
+    height: PEDESTAL_HEIGHT
+  };
 
   return {
     stageId: stage.id,
@@ -306,8 +447,10 @@ export function buildPuzzle(stage: StageConfig, size: BoardSize): Puzzle {
     silhouette: buildSilhouettePath(pieces.map(shiftedPolygon)),
     slots: stage.slots,
     rotate: stage.rotate,
-    flip: stage.flip
+    flip: stage.flip,
+    pedestal
   };
 }
 
 export const FLAT_EDGES: PieceEdges = { top: [], right: [], bottom: [], left: [] };
+export type { Chamfers };

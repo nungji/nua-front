@@ -1,4 +1,4 @@
-export type PieceShape = 'rect' | 'circle' | 'semicircle';
+import { ShapeId } from './shapeset';
 
 export type ConnectorKind = 'tab' | 'socket';
 
@@ -21,14 +21,12 @@ export type Point = {
   y: number;
 };
 
+export type PieceShape = 'rect' | 'circle' | 'semicircle';
+
 export type PartSpec = {
   id: string;
-  shape: PieceShape;
-  width: number;
-  height: number;
+  shape: ShapeId;
   slot: Point;
-  chamfers?: Chamfers;
-  requires?: string;
 };
 
 export type StageConfig = {
@@ -54,11 +52,19 @@ export type Piece = {
   edges: PieceEdges;
   chamfers: Chamfers;
   requires?: string;
+  overlaps: boolean;
   initialTurns: number;
   initialFlipped: boolean;
 };
 
 export type BoardSize = {
+  width: number;
+  height: number;
+};
+
+export type Pedestal = {
+  x: number;
+  y: number;
   width: number;
   height: number;
 };
@@ -71,4 +77,5 @@ export type Puzzle = {
   slots: boolean;
   rotate: boolean;
   flip: boolean;
+  pedestal: Pedestal;
 };
