@@ -1,6 +1,6 @@
 import { buildSilhouettePath } from './silhouette';
 import { SHAPES, ShapeId } from './shapeset';
-import { shiftedPolygon } from './shapes';
+import { piecePolygon, shiftedPolygon } from './shapes';
 import {
   BoardSize,
   Chamfers,
@@ -311,6 +311,69 @@ function autoRequires(pieces: Piece[]) {
   }
 }
 
+function keyOf(points: { x: number; y: number }[]) {
+  const unique = new Set(
+    points.map((point) => `${Math.round(point.x * 100) / 100},${Math.round(point.y * 100) / 100}`)
+  );
+
+  return [...unique].sort().join('|');
+}
+
+function transformOf(piece: Piece, turns: number, flipped: boolean) {
+  const centerX = piece.width / 2;
+  const centerY = piece.height / 2;
+  const radians = (turns * 90 * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+
+  return piecePolygon(piece).map((point) => {
+    const offsetX = flipped ? centerX - point.x : point.x - centerX;
+    const offsetY = point.y - centerY;
+
+    return {
+      x: centerX + offsetX * cos - offsetY * sin,
+      y: centerY + offsetX * sin + offsetY * cos
+    };
+  });
+}
+
+function computeSymmetry(piece: Piece) {
+  const base = keyOf(piecePolygon(piece));
+  const mask: boolean[] = [];
+
+  for (let turns = 0; turns < 4; turns += 1) {
+    for (const flipped of [false, true]) {
+      mask.push(keyOf(transformOf(piece, turns, flipped)) === base);
+    }
+  }
+
+  return mask;
+}
+
+function markHints(pieces: Piece[]) {
+  for (const piece of pieces) {
+    const others = pieces.filter((other) => other.id !== piece.id);
+    let covered = true;
+
+    for (let column = 1; column < 5 && covered; column += 1) {
+      for (let row = 1; row < 5 && covered; row += 1) {
+        const x = piece.slot.x + (piece.width * column) / 5;
+        const y = piece.slot.y + (piece.height * row) / 5;
+
+        covered = others.some(
+          (other) =>
+            x > other.slot.x &&
+            x < other.slot.x + other.width &&
+            y > other.slot.y &&
+            y < other.slot.y + other.height
+        );
+      }
+    }
+
+    piece.needsHint = covered || Math.min(piece.width, piece.height) <= 10;
+  }
+}
+
 function markOverlaps(pieces: Piece[]) {
   for (let i = 0; i < pieces.length; i += 1) {
     for (let j = i + 1; j < pieces.length; j += 1) {
@@ -403,7 +466,6 @@ export function buildPuzzle(stage: StageConfig, size: BoardSize): Puzzle {
 
   const pieces: Piece[] = parts.map((item, index) => {
     const shape = SHAPES[item.shape];
-
     return {
       id: item.id,
       shape: shape.kind,
@@ -417,6 +479,8 @@ export function buildPuzzle(stage: StageConfig, size: BoardSize): Puzzle {
       chamfers: shape.chamfers ?? [0, 0, 0, 0],
       requires: undefined,
       overlaps: false,
+      needsHint: false,
+      symmetry: [],
       initialTurns: stage.rotate ? INITIAL_TURNS[index % INITIAL_TURNS.length] : 0,
       initialFlipped: stage.flip ? INITIAL_FLIPS[index % INITIAL_FLIPS.length] : false
     };
@@ -431,6 +495,12 @@ export function buildPuzzle(stage: StageConfig, size: BoardSize): Puzzle {
   }
 
   markOverlaps(pieces);
+  markHints(pieces);
+
+  for (const piece of pieces) {
+    piece.symmetry = computeSymmetry(piece);
+  }
+
   layoutScatter(pieces, size, targetX);
 
   const pedestal: Pedestal = {

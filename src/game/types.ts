@@ -53,6 +53,8 @@ export type Piece = {
   chamfers: Chamfers;
   requires?: string;
   overlaps: boolean;
+  needsHint: boolean;
+  symmetry: boolean[];
   initialTurns: number;
   initialFlipped: boolean;
 };

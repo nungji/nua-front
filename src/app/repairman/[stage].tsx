@@ -233,12 +233,11 @@ export default function RepairmanStage() {
       const targetX = piece.slot.x + piece.width / 2;
       const targetY = piece.slot.y + piece.height / 2;
       const distance = Math.hypot(centerX - targetX, centerY - targetY);
-      const symmetric = piece.shape === 'circle';
-      const needTurn = stage.rotate && !symmetric && (turns[piece.id] ?? 0) % 4 !== 0;
-      const needFlip = stage.flip && !symmetric && Boolean(flipped[piece.id]);
+      const orientation = (turns[piece.id] ?? 0) % 4;
+      const aligned = piece.symmetry[orientation * 2 + (flipped[piece.id] ? 1 : 0)] ?? false;
       const blocked = Boolean(piece.requires && !placed[piece.requires]);
 
-      if (distance <= SNAP_RADIUS && !needTurn && !needFlip && !blocked) {
+      if (distance <= SNAP_RADIUS && aligned && !blocked) {
         snap(piece.id);
         return;
       }
@@ -265,7 +264,7 @@ export default function RepairmanStage() {
         return;
       }
 
-      if (stage.rotate && piece.shape !== 'circle') {
+      if (stage.rotate && !isFixed(piece)) {
         rotate(piece.id);
       }
     },
@@ -280,7 +279,7 @@ export default function RepairmanStage() {
         return;
       }
 
-      if (stage.flip && piece.shape !== 'circle') {
+      if (stage.flip && !isFixed(piece)) {
         flip(piece.id);
       }
     },
@@ -410,8 +409,8 @@ export default function RepairmanStage() {
 
             {!puzzle.slots
               ? pieces.map((piece) =>
-                  piece.overlaps ? (
-                    <Ghost key={'hint' + piece.id} piece={piece} fill="#F05A28" opacity={0.24} />
+                  piece.needsHint ? (
+                    <Hint key={'hint' + piece.id} piece={piece} />
                   ) : null
                 )
               : null}
@@ -466,6 +465,30 @@ export default function RepairmanStage() {
         )}
       </View>
     </SafeAreaView>
+  );
+}
+
+function isFixed(piece: Piece) {
+  return piece.symmetry.every(Boolean);
+}
+
+function Hint({ piece }: { piece: Piece }) {
+  return (
+    <View
+      style={{
+        position: 'absolute',
+        left: piece.slot.x - PIECE_PAD,
+        top: piece.slot.y - PIECE_PAD
+      }}
+    >
+      <PieceGraphic
+        piece={piece}
+        edges={piece.edges}
+        fill="none"
+        stroke="#FB923C"
+        strokeWidth={1.5}
+      />
+    </View>
   );
 }
 

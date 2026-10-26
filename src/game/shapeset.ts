@@ -159,3 +159,40 @@ export const SHAPES = {
 } as const;
 
 export type ShapeId = keyof typeof SHAPES;
+
+export type Symmetry = {
+  rotation: 1 | 2 | 4;
+  mirror: boolean;
+};
+
+const NO_CHAMFERS: Chamfers = [0, 0, 0, 0];
+
+export function symmetryOf(shape: ShapeSpec): Symmetry {
+  if (shape.kind === 'circle') {
+    return { rotation: 4, mirror: true };
+  }
+
+  if (shape.kind === 'semicircle') {
+    return { rotation: 1, mirror: true };
+  }
+
+  const chamfers = shape.chamfers ?? NO_CHAMFERS;
+  const square = shape.width === shape.height;
+  const even = chamfers[0] === chamfers[2] && chamfers[1] === chamfers[3];
+  const uniform = chamfers[0] === chamfers[1] && chamfers[1] === chamfers[2] && chamfers[2] === chamfers[3];
+  const mirror = chamfers[0] === chamfers[1] && chamfers[2] === chamfers[3];
+
+  if (square && uniform) {
+    return { rotation: 4, mirror };
+  }
+
+  if (even) {
+    return { rotation: 2, mirror };
+  }
+
+  return { rotation: 1, mirror };
+}
+
+export function stepFor(symmetry: Symmetry) {
+  return 4 / symmetry.rotation;
+}
