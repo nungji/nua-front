@@ -33,6 +33,7 @@ function buildEntry(piece: Piece, flipped: boolean): PhysicsEntry {
     y: point.y
   }));
   const hull = Vertices.hull(points as never);
+  const centroid = Vertices.centre(hull as never);
   let body: Matter.Body | null = null;
 
   try {
@@ -51,8 +52,8 @@ function buildEntry(piece: Piece, flipped: boolean): PhysicsEntry {
   return {
     body,
     offset: {
-      x: piece.width / 2 - body.position.x,
-      y: piece.height / 2 - body.position.y
+      x: piece.width / 2 - centroid.x,
+      y: piece.height / 2 - centroid.y
     },
     angle: 0,
     flipped
