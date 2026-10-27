@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Pressable, Text, useWindowDimensions, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
 import { Game } from '@/games';
-import { CAROUSEL_DURATION, CAROUSEL_EASING } from '@/stage';
+import { CAROUSEL_SPRING } from '@/stage';
 
 /** Figma selector frame is 1280 x 832. */
 const DESIGN = {
@@ -34,10 +34,11 @@ function GameSlot({ game, position, count, slot, size, activeSize, gap, onPress 
     const wrapped = ((position - slot.value) % count + count) % count;
     const offset = wrapped >= count / 2 ? wrapped - count : wrapped;
     const distance = Math.min(Math.abs(offset), VISIBLE_SLOTS);
-    const focus = 1 - distance;
+    const focus = 1 - Math.min(distance, 1);
 
     return {
-      opacity: distance >= VISIBLE_SLOTS ? 0 : 0.45 + focus * 0.55,
+      // fades out over the whole second slot so the spring overshoot cannot pop it back in
+      opacity: distance <= 1 ? 1 - 0.55 * distance : Math.max(0, 0.45 * (VISIBLE_SLOTS - distance)),
       transform: [{ translateX: offset * gap }, { scale: 1 + (activeSize / size - 1) * focus }]
     };
   });
@@ -75,7 +76,7 @@ export function GameSelector({ games, onSelect }: Props) {
   const slot = useSharedValue(0);
 
   useEffect(() => {
-    slot.value = withTiming(index, { duration: CAROUSEL_DURATION, easing: CAROUSEL_EASING });
+    slot.value = withSpring(index, CAROUSEL_SPRING);
   }, [index, slot]);
 
   const count = games.length;
