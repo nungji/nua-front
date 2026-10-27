@@ -1,3 +1,4 @@
+import { usePathname } from 'expo-router';
 import { useCallback, useEffect } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
@@ -59,11 +60,11 @@ function CurtainPanel({ width, height, progress, openX, closedX, side }: PanelPr
 export function StageCurtains() {
   const { width, height } = useWindowDimensions();
   const phase = useStageStore((state) => state.phase);
-  const peek = useStageStore((state) => state.peek);
   const settle = useStageStore((state) => state.settle);
+  const pathname = usePathname();
 
   const progress = useSharedValue(0);
-  const inset = Math.max(width - peekPixels(peek, width), width / 2);
+  const inset = Math.max(width - peekPixels(pathname, width), width / 2);
   const edge = width / 2;
 
   const handleSettled = useCallback(

@@ -27,7 +27,7 @@ export default function MockGameScreen() {
         </View>
 
         <Pressable
-          onPress={() => back('selector')}
+          onPress={() => back()}
           hitSlop={16}
           className="mx-auto mb-6 rounded-full border border-white/30 px-6 py-3"
         >

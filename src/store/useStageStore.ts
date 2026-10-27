@@ -1,31 +1,29 @@
 import { create } from 'zustand';
 
-import { CURTAIN_HOLD, StagePeek } from '@/stage';
+import { CURTAIN_HOLD } from '@/stage';
 
 type StagePhase = 'open' | 'closed';
 
 type StageState = {
   phase: StagePhase;
-  peek: StagePeek;
   pending: (() => void) | null;
-  enter: (peek: StagePeek, action: () => void) => void;
+  enter: (action: () => void) => void;
   settle: (phase: StagePhase) => void;
 };
 
 export const useStageStore = create<StageState>((set, get) => ({
   phase: 'open',
-  peek: 'selector',
   pending: null,
 
-  enter: (peek, action) => {
+  enter: (action) => {
     // already covered: swap the scene in place instead of waiting for another close
     if (get().phase === 'closed') {
-      set({ peek, pending: null });
+      set({ pending: null });
       action();
       return;
     }
 
-    set({ phase: 'closed', peek, pending: action });
+    set({ phase: 'closed', pending: action });
   },
 
   // called by the curtain animation once it stops, so the scene swaps while fully covered

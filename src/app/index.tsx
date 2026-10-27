@@ -13,7 +13,7 @@ export default function SelectorScreen() {
     <View className="flex-1 bg-[#0B1026]">
       <StageBackdrop />
       <SafeAreaView className="flex-1 items-center justify-center">
-        <GameSelector games={GAMES} onSelect={(game) => go(game.route, 'game')} />
+        <GameSelector games={GAMES} onSelect={(game) => go(game.route)} />
       </SafeAreaView>
     </View>
   );

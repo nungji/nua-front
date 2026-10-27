@@ -1,15 +1,15 @@
 import { router } from 'expo-router';
 
 import { useStageStore } from '@/store/useStageStore';
-import { StagePeek } from '@/stage';
 
+/** Scene changes are always played behind the curtains; callers only pick the route. */
 export function useStageRouter() {
   const enter = useStageStore((state) => state.enter);
 
   return {
-    go: (route: string, peek: StagePeek) => enter(peek, () => router.push(route)),
-    back: (peek: StagePeek) =>
-      enter(peek, () => {
+    go: (route: string) => enter(() => router.push(route)),
+    back: () =>
+      enter(() => {
         if (router.canGoBack()) {
           router.back();
         } else {

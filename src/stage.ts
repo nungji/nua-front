@@ -7,13 +7,13 @@ export const CURTAIN_EASING = Easing.bezier(0.45, 0, 0.55, 1);
 export const CAROUSEL_DURATION = 620;
 export const CAROUSEL_EASING = Easing.bezier(0.15, 0, 0.1, 1);
 
-/** How much curtain stays on screen while open. In-game scenes hide it entirely. */
-export type StagePeek = 'selector' | 'game';
+/** The selector keeps a sliver of curtain on screen, every other scene hides it entirely. */
+export const SELECTOR_ROUTE = '/';
 export const PEEK_WIDTH = 45;
 export const PEEK_REFERENCE_WIDTH = 1280;
 
-export function peekPixels(peek: StagePeek, width: number): number {
-  if (peek === 'game') {
+export function peekPixels(route: string, width: number): number {
+  if (route !== SELECTOR_ROUTE) {
     return 0;
   }
 
