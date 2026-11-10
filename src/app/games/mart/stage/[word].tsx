@@ -1,6 +1,7 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useStageRouter } from '@/hooks/useStageRouter';
 import { MartTopBar } from '@/components/mart/MartTopBar';
 import { StageAssemble } from '@/components/mart/stage/StageAssemble';
 import { StageCorrectResult } from '@/components/mart/stage/StageCorrectResult';
@@ -27,7 +28,7 @@ const STAGE_TITLES: Record<(typeof MART_STAGE_STEPS)[number], 'mart' | 'word'> =
 };
 
 export default function MartStageScreen() {
-  const router = useRouter();
+  const { back } = useStageRouter();
   const { word: wordParam } = useLocalSearchParams<{ word: MartWordId }>();
   const word = MART_WORDS[wordParam];
   const activeWord = useMartStore((state) => state.activeWord);
@@ -49,7 +50,7 @@ export default function MartStageScreen() {
 
   function handleBack() {
     if (stageStep === MART_STAGE_STEPS[0]) {
-      router.back();
+      back();
     } else {
       goBackStep();
     }

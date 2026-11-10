@@ -1,6 +1,6 @@
-import { useRouter } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useStageRouter } from '@/hooks/useStageRouter';
 import { MartIcon } from '@/components/mart/MartIcon';
 import { MartImagePlaceholder } from '@/components/mart/MartImagePlaceholder';
 import { MartRoundButton } from '@/components/mart/MartRoundButton';
@@ -10,14 +10,14 @@ import { MART_WORD_ORDER } from '@/enums';
 import { useMartStore } from '@/store/useMartStore';
 
 export default function MartMap() {
-  const router = useRouter();
+  const { go } = useStageRouter();
   const wordStatus = useMartStore((state) => state.wordStatus);
   const startStage = useMartStore((state) => state.startStage);
   const allCompleted = MART_WORD_ORDER.every((id) => wordStatus[id] === 'completed');
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <MartTopBar title="마트 지도" rightIcon="book" onPressRight={() => router.push('/mart/wordbook')} />
+      <MartTopBar title="마트 지도" rightIcon="book" onPressRight={() => go('/games/mart/wordbook')} />
       <View className="flex-1 flex-row flex-wrap p-4 justify-between content-start">
         {MART_WORD_ORDER.map((wordId) => {
           const word = MART_WORDS[wordId];
@@ -30,7 +30,7 @@ export default function MartMap() {
               disabled={locked}
               onPress={() => {
                 startStage(wordId);
-                router.push(`/mart/stage/${wordId}`);
+                go(`/games/mart/stage/${wordId}`);
               }}
               className={`w-[140px] h-[146px] mb-4 rounded-2xl p-2 items-center bg-gray-50 ${
                 locked ? 'opacity-50' : ''
@@ -49,7 +49,7 @@ export default function MartMap() {
       </View>
       {allCompleted ? (
         <View className="items-center pb-6">
-          <MartRoundButton variant="primary" icon="next" onPress={() => router.push('/mart/ending')} />
+          <MartRoundButton variant="primary" icon="next" onPress={() => go('/games/mart/ending')} />
         </View>
       ) : null}
     </SafeAreaView>

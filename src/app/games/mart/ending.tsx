@@ -1,18 +1,15 @@
-import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useStageRouter } from '@/hooks/useStageRouter';
 import { FourPanelComic } from '@/components/mart/FourPanelComic';
 import { MartTopBar } from '@/components/mart/MartTopBar';
 
 export default function MartEnding() {
-  const router = useRouter();
+  const { back } = useStageRouter();
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <MartTopBar title="엔딩" onBack={() => router.replace('/mart/map')} />
-      <FourPanelComic
-        panels={[undefined, undefined, undefined, undefined]}
-        onNext={() => router.replace('/mart/map')}
-      />
+      <MartTopBar title="엔딩" />
+      <FourPanelComic panels={[undefined, undefined, undefined, undefined]} onNext={back} />
     </SafeAreaView>
   );
 }

@@ -1,22 +1,18 @@
-import { useEffect } from 'react';
-import { useRouter } from 'expo-router';
+import { Redirect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useStageRouter } from '@/hooks/useStageRouter';
 import { FourPanelComic } from '@/components/mart/FourPanelComic';
 import { MartTopBar } from '@/components/mart/MartTopBar';
 import { useMartStore } from '@/store/useMartStore';
 
 export default function MartPrologue() {
-  const router = useRouter();
+  const { go } = useStageRouter();
   const hasSeenPrologue = useMartStore((state) => state.hasSeenPrologue);
   const seePrologue = useMartStore((state) => state.seePrologue);
 
-  useEffect(() => {
-    if (hasSeenPrologue) {
-      router.replace('/mart/map');
-    }
-  }, [hasSeenPrologue, router]);
-
-  if (hasSeenPrologue) return null;
+  if (hasSeenPrologue) {
+    return <Redirect href="/games/mart/map" />;
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -25,7 +21,7 @@ export default function MartPrologue() {
         panels={[undefined, undefined, undefined, undefined]}
         onNext={() => {
           seePrologue();
-          router.replace('/mart/map');
+          go('/games/mart/map');
         }}
       />
     </SafeAreaView>
