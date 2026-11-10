@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useStageRouter } from '@/hooks/useStageRouter';
 import { MartTopBar } from '@/components/mart/MartTopBar';
@@ -11,9 +11,8 @@ import { StageMeetWord } from '@/components/mart/stage/StageMeetWord';
 import { StageProblem } from '@/components/mart/stage/StageProblem';
 import { StageReward } from '@/components/mart/stage/StageReward';
 import { StageSoundQuiz } from '@/components/mart/stage/StageSoundQuiz';
-import { MART_WORDS } from '@/data/martWords';
+import { buildWordSyllables, getWordCorner, getWordRow, pickQuizOptions } from '@/data/martWords';
 import { MART_STAGE_STEPS } from '@/enums';
-import type { MartWordId } from '@/enums';
 import { useMartStore } from '@/store/useMartStore';
 
 const STAGE_TITLES: Record<(typeof MART_STAGE_STEPS)[number], 'mart' | 'word'> = {
@@ -29,24 +28,30 @@ const STAGE_TITLES: Record<(typeof MART_STAGE_STEPS)[number], 'mart' | 'word'> =
 
 export default function MartStageScreen() {
   const { back } = useStageRouter();
-  const { word: wordParam } = useLocalSearchParams<{ word: MartWordId }>();
-  const word = MART_WORDS[wordParam];
+  const { word } = useLocalSearchParams<{ word: string }>();
   const activeWord = useMartStore((state) => state.activeWord);
   const stageStep = useMartStore((state) => state.stageStep);
+  const cornerStatus = useMartStore((state) => state.cornerStatus);
   const startStage = useMartStore((state) => state.startStage);
   const advanceStep = useMartStore((state) => state.advanceStep);
   const goBackStep = useMartStore((state) => state.goBackStep);
   const completeStage = useMartStore((state) => state.completeStage);
 
+  const row = word ? getWordRow(word) : null;
+  const syllables = useMemo(() => (word && row ? buildWordSyllables(word, row.blankRule) : []), [word, row]);
+  const meaningOptions = useMemo(() => (word ? pickQuizOptions(word, 2) : []), [word]);
+  const soundOptions = useMemo(() => (word ? pickQuizOptions(word, 2) : []), [word]);
+
   useEffect(() => {
-    if (word && activeWord !== wordParam) {
-      startStage(wordParam);
+    if (word && activeWord !== word) {
+      startStage(word);
     }
-  }, [word, wordParam, activeWord, startStage]);
+  }, [word, activeWord, startStage]);
 
-  if (!word) return null;
+  if (!word || !row) return null;
 
-  const title = STAGE_TITLES[stageStep] === 'mart' ? '마트' : word.label;
+  const title = STAGE_TITLES[stageStep] === 'mart' ? '마트' : word;
+  const cornerCleared = cornerStatus[getWordCorner(word)] === 'completed';
 
   function handleBack() {
     if (stageStep === MART_STAGE_STEPS[0]) {
@@ -61,10 +66,14 @@ export default function MartStageScreen() {
       <MartTopBar title={title} onBack={handleBack} />
       {stageStep === 'problem' && <StageProblem onNext={advanceStep} />}
       {stageStep === 'meetWord' && <StageMeetWord word={word} onNext={advanceStep} />}
-      {stageStep === 'meaningQuiz' && <StageMeaningQuiz word={word} onCorrect={advanceStep} />}
+      {stageStep === 'meaningQuiz' && (
+        <StageMeaningQuiz word={word} options={meaningOptions} onCorrect={advanceStep} />
+      )}
       {stageStep === 'listen' && <StageListen word={word} onNext={advanceStep} />}
-      {stageStep === 'soundQuiz' && <StageSoundQuiz word={word} onCorrect={advanceStep} />}
-      {stageStep === 'assemble' && <StageAssemble word={word} onCorrect={advanceStep} />}
+      {stageStep === 'soundQuiz' && (
+        <StageSoundQuiz word={word} options={soundOptions} onCorrect={advanceStep} />
+      )}
+      {stageStep === 'assemble' && <StageAssemble syllables={syllables} onCorrect={advanceStep} />}
       {stageStep === 'correct' && (
         <StageCorrectResult
           word={word}
@@ -74,7 +83,7 @@ export default function MartStageScreen() {
           }}
         />
       )}
-      {stageStep === 'reward' && <StageReward word={word} />}
+      {stageStep === 'reward' && <StageReward word={word} cornerCleared={cornerCleared} />}
     </SafeAreaView>
   );
 }

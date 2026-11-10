@@ -1,16 +1,16 @@
 import { View } from 'react-native';
 import { useStageRouter } from '@/hooks/useStageRouter';
-import type { MartWordConfig } from '@/data/martWords';
 import { MartIcon } from '../MartIcon';
 import { MartImagePlaceholder } from '../MartImagePlaceholder';
 import { MartRoundButton } from '../MartRoundButton';
 import { MartWordCard } from '../MartWordCard';
 
 interface StageRewardProps {
-  word: MartWordConfig;
+  word: string;
+  cornerCleared: boolean;
 }
 
-export function StageReward({ word }: StageRewardProps) {
+export function StageReward({ word, cornerCleared }: StageRewardProps) {
   const { go, back } = useStageRouter();
 
   return (
@@ -20,11 +20,15 @@ export function StageReward({ word }: StageRewardProps) {
         <MartIcon name="star" />
         <MartIcon name="star" />
       </View>
-      <MartWordCard label={word.label} imageSrc={word.imageSrc} />
+      <MartWordCard label={word} />
       <MartImagePlaceholder className="w-[300px] h-[150px] rounded-2xl" />
       <View className="flex-row gap-4">
         <MartRoundButton variant="secondary" icon="book" onPress={() => go('/games/mart/wordbook')} />
-        <MartRoundButton variant="primary" icon="home" onPress={back} />
+        <MartRoundButton
+          variant="primary"
+          icon="home"
+          onPress={() => (cornerCleared ? go('/games/mart/corner-clear') : back())}
+        />
       </View>
     </View>
   );

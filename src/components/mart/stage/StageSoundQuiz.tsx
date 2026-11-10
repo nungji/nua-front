@@ -1,20 +1,20 @@
 import { useState } from 'react';
 import { View } from 'react-native';
-import type { MartWordConfig } from '@/data/martWords';
 import { MartOptionRow } from '../MartOptionRow';
 import { MartRoundButton } from '../MartRoundButton';
 
 interface StageSoundQuizProps {
-  word: MartWordConfig;
+  word: string;
+  options: string[];
   onCorrect: () => void;
 }
 
-export function StageSoundQuiz({ word, onCorrect }: StageSoundQuizProps) {
+export function StageSoundQuiz({ word, options, onCorrect }: StageSoundQuizProps) {
   const [selected, setSelected] = useState<string | null>(null);
 
   function handleSelect(option: string) {
     setSelected(option);
-    if (option === word.label) {
+    if (option === word) {
       onCorrect();
     }
   }
@@ -29,7 +29,7 @@ export function StageSoundQuiz({ word, onCorrect }: StageSoundQuizProps) {
         }}
       />
       <View className="w-[300px] gap-3">
-        {word.soundOptions.map((option) => (
+        {options.map((option) => (
           <MartOptionRow
             key={option}
             label={option}

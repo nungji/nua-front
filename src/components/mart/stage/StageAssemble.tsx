@@ -1,16 +1,22 @@
 import { useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
-import type { MartJamoSlot, MartWordConfig } from '@/data/martWords';
+import type { MartJamoSlot, MartSyllableSlots } from '@/data/martWords';
+import { pickDistractorJamo } from '@/utils/hangul';
 import { MartImagePlaceholder } from '../MartImagePlaceholder';
 import { MartRoundButton } from '../MartRoundButton';
 import { MartTile } from '../MartTile';
 
 interface StageAssembleProps {
-  word: MartWordConfig;
+  syllables: MartSyllableSlots[];
   onCorrect: () => void;
 }
 
-const DISTRACTOR_JAMO = 'ㅏ';
+interface FlatSlot {
+  syllableIndex: number;
+  jamoIndex: number;
+  jamo: string;
+  given: boolean;
+}
 
 function shuffle<T>(items: T[]): T[] {
   const copy = [...items];
@@ -21,29 +27,40 @@ function shuffle<T>(items: T[]): T[] {
   return copy;
 }
 
-export function StageAssemble({ word, onCorrect }: StageAssembleProps) {
-  const blankIndices = useMemo(
-    () => word.slots.reduce<number[]>((acc, slot, index) => (slot.given ? acc : [...acc, index]), []),
-    [word]
+function flattenSlots(syllables: MartSyllableSlots[]): FlatSlot[] {
+  return syllables.flatMap((syllable, syllableIndex) =>
+    syllable.map((slot, jamoIndex) => ({ syllableIndex, jamoIndex, jamo: slot.jamo, given: slot.given }))
   );
-  const [filled, setFilled] = useState<Record<number, string>>({});
-  const [bank, setBank] = useState(() =>
-    shuffle([...blankIndices.map((i) => word.slots[i].jamo), DISTRACTOR_JAMO])
-  );
+}
+
+function slotKey(slot: { syllableIndex: number; jamoIndex: number }): string {
+  return `${slot.syllableIndex}-${slot.jamoIndex}`;
+}
+
+export function StageAssemble({ syllables, onCorrect }: StageAssembleProps) {
+  const blankSlots = useMemo(() => flattenSlots(syllables).filter((slot) => !slot.given), [syllables]);
+
+  const [filled, setFilled] = useState<Record<string, string>>({});
+  const [bank, setBank] = useState(() => {
+    const needed = blankSlots.map((slot) => slot.jamo);
+    const distractor = pickDistractorJamo(new Set(needed));
+    return shuffle([...needed, distractor]);
+  });
   const [showIncorrect, setShowIncorrect] = useState(false);
 
   function handleTilePress(tileIndex: number, jamo: string) {
-    const nextEmptyIndex = blankIndices.find((i) => filled[i] === undefined);
-    if (nextEmptyIndex === undefined) return;
+    const nextEmpty = blankSlots.find((slot) => filled[slotKey(slot)] === undefined);
+    if (!nextEmpty) return;
 
-    const nextFilled = { ...filled, [nextEmptyIndex]: jamo };
+    const key = slotKey(nextEmpty);
+    const nextFilled = { ...filled, [key]: jamo };
     setFilled(nextFilled);
     setBank((current) => current.filter((_, i) => i !== tileIndex));
 
-    const isComplete = blankIndices.every((i) => nextFilled[i] !== undefined);
+    const isComplete = blankSlots.every((slot) => nextFilled[slotKey(slot)] !== undefined);
     if (!isComplete) return;
 
-    const allCorrect = blankIndices.every((i) => nextFilled[i] === word.slots[i].jamo);
+    const allCorrect = blankSlots.every((slot) => nextFilled[slotKey(slot)] === slot.jamo);
     if (allCorrect) {
       onCorrect();
       return;
@@ -52,13 +69,14 @@ export function StageAssemble({ word, onCorrect }: StageAssembleProps) {
   }
 
   function handleRetry() {
-    const correctedFilled: Record<number, string> = {};
+    const correctedFilled: Record<string, string> = {};
     const returnedTiles: string[] = [];
-    blankIndices.forEach((i) => {
-      if (filled[i] === word.slots[i].jamo) {
-        correctedFilled[i] = filled[i];
-      } else if (filled[i] !== undefined) {
-        returnedTiles.push(filled[i]);
+    blankSlots.forEach((slot) => {
+      const key = slotKey(slot);
+      if (filled[key] === slot.jamo) {
+        correctedFilled[key] = filled[key];
+      } else if (filled[key] !== undefined) {
+        returnedTiles.push(filled[key]);
       }
     });
     setFilled(correctedFilled);
@@ -69,7 +87,7 @@ export function StageAssemble({ word, onCorrect }: StageAssembleProps) {
   if (showIncorrect) {
     return (
       <View className="flex-1 items-center justify-between py-6">
-        <SlotRow word={word} filled={filled} showErrors />
+        <SlotRow syllables={syllables} filled={filled} showErrors />
         <MartImagePlaceholder className="w-[350px] h-[300px] rounded-2xl" />
         <MartRoundButton variant="primary" icon="retry" onPress={handleRetry} />
       </View>
@@ -78,8 +96,8 @@ export function StageAssemble({ word, onCorrect }: StageAssembleProps) {
 
   return (
     <View className="flex-1 items-center justify-between py-6">
-      <MartImagePlaceholder imageSrc={word.imageSrc} className="w-[350px] h-[130px] rounded-2xl" />
-      <SlotRow word={word} filled={filled} />
+      <MartImagePlaceholder className="w-[350px] h-[130px] rounded-2xl" />
+      <SlotRow syllables={syllables} filled={filled} />
       <View className="flex-row flex-wrap gap-3 w-[320px] justify-center">
         {bank.map((jamo, index) => (
           <MartTile key={`${jamo}-${index}`} glyph={jamo} onPress={() => handleTilePress(index, jamo)} />
@@ -90,34 +108,28 @@ export function StageAssemble({ word, onCorrect }: StageAssembleProps) {
 }
 
 function SlotRow({
-  word,
+  syllables,
   filled,
   showErrors,
 }: {
-  word: MartWordConfig;
-  filled: Record<number, string>;
+  syllables: MartSyllableSlots[];
+  filled: Record<string, string>;
   showErrors?: boolean;
 }) {
   return (
-    <View className="flex-row gap-3">
-      {word.syllables.map((_, syllableIndex) => {
-        const consonantIndex = syllableIndex * 2;
-        const vowelIndex = syllableIndex * 2 + 1;
-        return (
-          <View key={syllableIndex} className="w-[84px] h-[84px] gap-1">
+    <View className="flex-row flex-wrap gap-3 justify-center">
+      {syllables.map((syllable, syllableIndex) => (
+        <View key={syllableIndex} className="w-[84px] gap-1">
+          {syllable.map((slot, jamoIndex) => (
             <JamoSlot
-              slot={word.slots[consonantIndex]}
-              filledJamo={filled[consonantIndex]}
+              key={jamoIndex}
+              slot={slot}
+              filledJamo={filled[`${syllableIndex}-${jamoIndex}`]}
               showErrors={showErrors}
             />
-            <JamoSlot
-              slot={word.slots[vowelIndex]}
-              filledJamo={filled[vowelIndex]}
-              showErrors={showErrors}
-            />
-          </View>
-        );
-      })}
+          ))}
+        </View>
+      ))}
     </View>
   );
 }

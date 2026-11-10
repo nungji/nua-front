@@ -1,34 +1,33 @@
 import { create } from 'zustand';
-import { MART_STAGE_STEPS, MART_WORD_ORDER } from '@/enums';
-import type { MartStageStep, MartWordId, MartWordStatus } from '@/enums';
+import { MART_CORNER_ORDER, MART_STAGE_STEPS } from '@/enums';
+import type { MartCornerId, MartStageStep, MartWordStatus } from '@/enums';
+import { getWordCorner, isCornerCompleted } from '@/data/martWords';
 
 interface MartState {
   hasSeenPrologue: boolean;
-  wordStatus: Record<MartWordId, MartWordStatus>;
-  activeWord: MartWordId | null;
+  cornerStatus: Record<MartCornerId, MartWordStatus>;
+  completedWords: ReadonlySet<string>;
+  activeWord: string | null;
   stageStep: MartStageStep;
-  collectedWords: MartWordId[];
   seePrologue: () => void;
-  startStage: (word: MartWordId) => void;
+  startStage: (word: string) => void;
   advanceStep: () => void;
   goBackStep: () => void;
   completeStage: () => void;
 }
 
-const INITIAL_WORD_STATUS: Record<MartWordId, MartWordStatus> = {
-  milk: 'unlocked',
-  cucumber: 'locked',
-  grape: 'locked',
-  tofu: 'locked',
-  meat: 'locked',
+const INITIAL_CORNER_STATUS: Record<MartCornerId, MartWordStatus> = {
+  grocery: 'unlocked',
+  household: 'locked',
+  electronics: 'locked',
 };
 
 export const useMartStore = create<MartState>((set, get) => ({
   hasSeenPrologue: false,
-  wordStatus: INITIAL_WORD_STATUS,
+  cornerStatus: INITIAL_CORNER_STATUS,
+  completedWords: new Set(),
   activeWord: null,
   stageStep: 'problem',
-  collectedWords: [],
 
   seePrologue: () => set({ hasSeenPrologue: true }),
 
@@ -51,24 +50,24 @@ export const useMartStore = create<MartState>((set, get) => ({
   },
 
   completeStage: () => {
-    const { activeWord, wordStatus, collectedWords } = get();
+    const { activeWord, completedWords, cornerStatus } = get();
     if (!activeWord) return;
 
-    const currentIndex = MART_WORD_ORDER.indexOf(activeWord);
-    const nextWord = MART_WORD_ORDER[currentIndex + 1];
-    const nextWordStatus: Record<MartWordId, MartWordStatus> = {
-      ...wordStatus,
-      [activeWord]: 'completed',
-    };
-    if (nextWord && nextWordStatus[nextWord] === 'locked') {
-      nextWordStatus[nextWord] = 'unlocked';
+    const nextCompleted = new Set(completedWords);
+    nextCompleted.add(activeWord);
+
+    const cornerId = getWordCorner(activeWord);
+    const nextCornerStatus = { ...cornerStatus };
+
+    if (isCornerCompleted(cornerId, nextCompleted)) {
+      nextCornerStatus[cornerId] = 'completed';
+      const cornerIndex = MART_CORNER_ORDER.indexOf(cornerId);
+      const nextCorner = MART_CORNER_ORDER[cornerIndex + 1];
+      if (nextCorner && nextCornerStatus[nextCorner] === 'locked') {
+        nextCornerStatus[nextCorner] = 'unlocked';
+      }
     }
 
-    set({
-      wordStatus: nextWordStatus,
-      collectedWords: collectedWords.includes(activeWord)
-        ? collectedWords
-        : [...collectedWords, activeWord],
-    });
+    set({ completedWords: nextCompleted, cornerStatus: nextCornerStatus });
   },
 }));

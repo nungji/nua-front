@@ -1,4 +1,4 @@
-export type MartWordId = 'milk' | 'cucumber' | 'grape' | 'tofu' | 'meat';
+export type MartCornerId = 'grocery' | 'household' | 'electronics';
 
 export type MartWordStatus = 'locked' | 'unlocked' | 'completed';
 
@@ -12,7 +12,7 @@ export type MartStageStep =
   | 'correct'
   | 'reward';
 
-export const MART_WORD_ORDER: MartWordId[] = ['milk', 'cucumber', 'grape', 'tofu', 'meat'];
+export const MART_CORNER_ORDER: MartCornerId[] = ['grocery', 'household', 'electronics'];
 
 export const MART_STAGE_STEPS: MartStageStep[] = [
   'problem',
