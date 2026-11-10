@@ -73,6 +73,7 @@ npm run typecheck      # tsc --noEmit
 `lwyd-webfront`의 구조를 따른다. 웹 전용 파일(index.html, vite·nginx·Dockerfile)은 Expo에 맞는 대응물로 바꾼다.
 
 - 화면은 `src/app/`의 라우트 파일이 담당한다. `pages/` 같은 별도 화면 디렉터리를 두지 않는다.
+- 예외로 게임 화면 본체는 `src/games/<id>/` 가 소유하고 `src/app/games/[game].tsx` 가 그것을 렌더한다. 게임마다 생기는 상태·부품을 라우트 폴더에 쌓지 않기 위해서다.
 - 라우트 루트는 `src/app`이다(expo-router가 `src` 아래의 `app`을 라우트 루트로 인식한다).
 
 ```text
@@ -87,18 +88,68 @@ nua-front/
 ├── .env.example
 └── src/
     ├── app/               # expo-router 라우트 (파일 기반)
-    │   ├── _layout.tsx    # 루트 레이아웃 (Stack, SafeAreaProvider, global.css)
-    │   └── index.tsx
+    │   ├── _layout.tsx    # 루트 레이아웃 (Stack, SafeAreaProvider, 커튼 오버레이, global.css)
+    │   ├── +not-found.tsx # 없는 경로 → 셀렉터로 되돌림
+    │   ├── index.tsx      # 셀렉터 (게임을 고르는 화면)
+    │   └── games/
+    │       └── [game].tsx # 게임 라우트. 레지스트리에서 찾아 Scene 만 렌더한다
     ├── api/               # 통신 클라이언트 + 도메인별 요청 함수
     ├── assets/
     ├── components/        # 단일 파일 컴포넌트는 .tsx, 디렉터리 래핑 없음
+    │   ├── GameSelector.tsx   # 셀렉터 캐러셀
+    │   ├── StageBackdrop.tsx  # 무대 배경
+    │   ├── StageCurtains.tsx  # 커튼 오버레이
     │   └── icons/
-    ├── hooks/
+    ├── games/             # 게임 하나당 폴더 하나
+    │   ├── index.ts       # GAMES 레지스트리. 게임 추가는 여기 한 줄
+    │   ├── types.ts       # Game, GameSceneProps
+    │   └── example/index.tsx  # 예시 게임 화면 (새 게임은 이걸 복사해서 시작)
+    ├── hooks/             # useStageRouter (장면 전환)
     ├── store/             # zustand 스토어 (use<도메인>Store.ts)
     ├── enums.ts           # 백엔드 enum 값과 맞춘 상수 + 유니언 타입
     ├── global.css         # Tailwind 진입
+    ├── stage.ts           # 무대 전환 상수 (커튼 시간·이징·노출 폭)
     └── utils.ts
 ```
+
+## 미니게임 추가
+
+게임 하나는 **폴더 하나 + 레지스트리 한 줄**이다. 셀렉터·라우트·커튼 코드는 건드리지 않는다.
+
+1. `src/games/<id>/index.tsx` 를 만든다. `src/games/example/index.tsx` 를 복사해서 시작한다.
+
+```tsx
+import { useStageRouter } from '@/hooks/useStageRouter';
+
+import type { GameSceneProps } from '../types';
+
+export function MickaScene({ game }: GameSceneProps) {
+  const { back } = useStageRouter();
+
+  return <GameBoard accent={game.accent} onExit={back} />;
+}
+```
+
+2. `src/games/index.ts` 의 `GAMES` 에 한 줄 추가한다.
+
+```ts
+{ id: 'micka', title: '미카', accent: '#5AA9E6', route: '/games/micka', Scene: MickaScene }
+```
+
+`id` 는 URL(`/games/<id>`)과 같게 두고 `route` 는 `/games/` 아래에 둔다. 그래야 인게임에서 커튼이 화면 밖으로 완전히 나가는 규칙이 자동으로 적용된다. 셀렉터의 아이콘·개수·순서는 이 배열만 보고 정해진다.
+
+### 장면 전환
+
+게임 화면은 커튼을 직접 다루지 않는다. `useStageRouter()` 의 두 함수만 쓴다.
+
+| 함수 | 하는 일 |
+|---|---|
+| `go(route)` | 커튼을 닫고 그 라우트로 옮긴 뒤 다시 연다 |
+| `back()` | 커튼을 닫고 이전 화면(없으면 셀렉터)으로 돌아간 뒤 다시 연다 |
+
+`router.push` / `router.back` 을 직접 부르면 커튼 없이 화면이 툭 바뀐다. 커튼 시간·이징·닫힌 상태 유지 시간은 `src/stage.ts` 에 모여 있으므로 게임 화면이 알 필요는 없다.
+
+하위 경로가 필요한 게임(예: 스테이지 목록)은 `src/app/games/<id>/` 를 만들면 정적 라우트가 `[game].tsx` 를 덮는다.
 
 ## 도구
 
