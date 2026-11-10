@@ -3,6 +3,8 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { StageCurtains } from '@/components/StageCurtains';
+
 import '../global.css';
 
 export default function RootLayout() {
@@ -10,7 +12,8 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <Stack screenOptions={{ headerShown: false }} />
-        <StatusBar style="auto" />
+        <StageCurtains />
+        <StatusBar style="light" />
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

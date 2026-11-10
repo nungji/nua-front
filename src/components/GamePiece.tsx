@@ -3,8 +3,8 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import type { SharedValue } from 'react-native-reanimated';
 
 import { PieceGraphic } from '@/components/PieceGraphic';
-import { PIECE_PAD, tiltFor } from '@/game/stages';
-import { Piece } from '@/game/types';
+import { PIECE_PAD, tiltFor } from '@/games/repairman/game/stages';
+import { Piece } from '@/games/repairman/game/types';
 
 type GamePieceProps = {
   piece: Piece;

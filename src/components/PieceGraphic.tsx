@@ -1,8 +1,8 @@
 import { Path, Svg } from 'react-native-svg';
 
-import { piecePath } from '@/game/shapes';
-import { PIECE_PAD } from '@/game/stages';
-import { Piece, PieceEdges } from '@/game/types';
+import { piecePath } from '@/games/repairman/game/shapes';
+import { PIECE_PAD } from '@/games/repairman/game/stages';
+import { Piece, PieceEdges } from '@/games/repairman/game/types';
 
 type PieceGraphicProps = {
   piece: Piece;

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { findStage, initialPieces, STAGES } from '@/game/stages';
+import { findStage, initialPieces, STAGES } from '@/games/repairman/game/stages';
 
 type RepairmanState = {
   stageId: number;

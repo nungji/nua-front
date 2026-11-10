@@ -1,4 +1,3 @@
-import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -8,7 +7,7 @@ import { Path, Svg } from 'react-native-svg';
 
 import { GamePiece } from '@/components/GamePiece';
 import { PieceGraphic } from '@/components/PieceGraphic';
-import { pickPiece } from '@/game/hit';
+import { pickPiece } from '@/games/repairman/game/hit';
 import {
   createWorld,
   grabBody,
@@ -19,18 +18,21 @@ import {
   setBodyFlipped,
   stepWorld,
   visualCenter
-} from '@/game/physics';
-import { piecePolygon } from '@/game/shapes';
-import { buildPuzzle, findStage, PIECE_PAD, SNAP_RADIUS, tiltFor } from '@/game/stages';
-import { Piece } from '@/game/types';
+} from '@/games/repairman/game/physics';
+import { piecePolygon } from '@/games/repairman/game/shapes';
+import { buildPuzzle, findStage, PIECE_PAD, SNAP_RADIUS, tiltFor } from '@/games/repairman/game/stages';
+import { Piece } from '@/games/repairman/game/types';
 import { useRepairmanStore } from '@/store/useRepairmanStore';
 
 const FIXED_STEP = 16.666;
 const FLIP_HOLD = 200;
 
-export default function RepairmanStage() {
-  const params = useLocalSearchParams<{ stage?: string }>();
-  const stageId = Number(params.stage ?? 1) || 1;
+type PlayScreenProps = {
+  stageId: number;
+  onExit: () => void;
+};
+
+export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   const stage = useMemo(() => findStage(stageId), [stageId]);
 
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
@@ -365,7 +367,7 @@ export default function RepairmanStage() {
   return (
     <SafeAreaView className="flex-1 bg-white">
       <View className="flex-row items-center justify-between px-5 pt-2">
-        <Pressable onPress={() => router.back()} hitSlop={16}>
+        <Pressable onPress={onExit} hitSlop={16}>
           <Text className="text-lg text-gray-500">나가기</Text>
         </Pressable>
         <Text className="text-xl font-semibold text-gray-900">
