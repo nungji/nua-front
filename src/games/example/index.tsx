@@ -4,10 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StageBackdrop } from '@/components/StageBackdrop';
 import { useStageRouter } from '@/hooks/useStageRouter';
 
-import type { GameSceneProps } from './types';
+import type { GameSceneProps } from '../types';
 
-/** 임시 화면. 각 게임 폴더의 index.tsx 가 이 컴포넌트를 자기 게임으로 교체한다. */
-export function MockScene({ game, index }: GameSceneProps) {
+export function ExampleScene({ game }: GameSceneProps) {
   const { back } = useStageRouter();
 
   return (
@@ -18,7 +17,7 @@ export function MockScene({ game, index }: GameSceneProps) {
           <Text className="text-base" style={{ color: game.accent }}>
             {game.title}
           </Text>
-          <Text className="mt-3 text-6xl font-bold text-white">Scene {index + 1}</Text>
+          <Text className="mt-3 text-6xl font-bold text-white">Scene 1</Text>
         </View>
 
         <Pressable
