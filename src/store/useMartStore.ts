@@ -4,12 +4,10 @@ import type { MartCornerId, MartStageStep, MartWordStatus } from '@/enums';
 import { getWordCorner, isCornerCompleted } from '@/data/martWords';
 
 interface MartState {
-  hasSeenPrologue: boolean;
   cornerStatus: Record<MartCornerId, MartWordStatus>;
   completedWords: ReadonlySet<string>;
   activeWord: string | null;
   stageStep: MartStageStep;
-  seePrologue: () => void;
   startStage: (word: string) => void;
   advanceStep: () => void;
   goBackStep: () => void;
@@ -23,15 +21,12 @@ const INITIAL_CORNER_STATUS: Record<MartCornerId, MartWordStatus> = {
 };
 
 export const useMartStore = create<MartState>((set, get) => ({
-  hasSeenPrologue: false,
   cornerStatus: INITIAL_CORNER_STATUS,
   completedWords: new Set(),
   activeWord: null,
-  stageStep: 'problem',
+  stageStep: 'meetWord',
 
-  seePrologue: () => set({ hasSeenPrologue: true }),
-
-  startStage: (word) => set({ activeWord: word, stageStep: 'problem' }),
+  startStage: (word) => set({ activeWord: word, stageStep: 'meetWord' }),
 
   advanceStep: () => {
     const { stageStep } = get();
