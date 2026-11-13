@@ -26,6 +26,12 @@ export const RADIUS = {
   button: 24
 } as const;
 
+export const TEXT_SHADOW = {
+  textShadowColor: 'rgba(10, 44, 107, 0.45)',
+  textShadowOffset: { width: 0, height: 3 },
+  textShadowRadius: 6
+} as const;
+
 export const SHADOW = {
   card: {
     shadowColor: COLORS.shadow,
@@ -42,9 +48,6 @@ export const SHADOW = {
     elevation: 4
   }
 } as const;
-
-/** Card and mascot frames in the design sit one shade lighter than their accent. */
-export const CARD_COLORS = [COLORS.sand, COLORS.purple, COLORS.mint, COLORS.cyan, COLORS.coral, COLORS.oceanMid];
 
 export function withAlpha(hex: string, alpha: number): string {
   const value = hex.replace('#', '');
