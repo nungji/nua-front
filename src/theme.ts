@@ -57,3 +57,16 @@ export function withAlpha(hex: string, alpha: number): string {
 
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
+
+const clampByte = (value: number) => Math.max(0, Math.min(255, Math.round(value)));
+
+/** `amount` in -1..1 : negative darkens, positive lightens. */
+export function shade(hex: string, amount: number): string {
+  const value = hex.replace('#', '');
+  const channels = [0, 2, 4].map((offset) => parseInt(value.slice(offset, offset + 2), 16));
+  const target = amount < 0 ? 0 : 255;
+  const ratio = Math.abs(amount);
+  const mixed = channels.map((channel) => clampByte(channel + (target - channel) * ratio));
+
+  return `#${mixed.map((channel) => channel.toString(16).padStart(2, '0')).join('')}`;
+}
