@@ -2,6 +2,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MartTopBar } from '@/components/mart/MartTopBar';
 import { MartWordCard } from '@/components/mart/MartWordCard';
+import { getMartWordImage } from '@/data/martWordImages';
 import { MART_CORNERS } from '@/data/martWords';
 import { MART_CORNER_ORDER } from '@/enums';
 import { useMartStore } from '@/store/useMartStore';
@@ -22,7 +23,12 @@ export default function MartWordbook() {
                 {corner.rows
                   .flatMap((row) => row.words)
                   .map((word) => (
-                    <MartWordCard key={word} label={word} locked={!completedWords.has(word)} />
+                    <MartWordCard
+                      key={word}
+                      label={word}
+                      imageSrc={getMartWordImage(word)}
+                      locked={!completedWords.has(word)}
+                    />
                   ))}
               </View>
             </View>

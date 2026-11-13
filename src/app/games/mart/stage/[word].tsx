@@ -8,7 +8,6 @@ import { StageCorrectResult } from '@/components/mart/stage/StageCorrectResult';
 import { StageListen } from '@/components/mart/stage/StageListen';
 import { StageMeaningQuiz } from '@/components/mart/stage/StageMeaningQuiz';
 import { StageMeetWord } from '@/components/mart/stage/StageMeetWord';
-import { StageProblem } from '@/components/mart/stage/StageProblem';
 import { StageReward } from '@/components/mart/stage/StageReward';
 import { StageSoundQuiz } from '@/components/mart/stage/StageSoundQuiz';
 import { buildWordSyllables, getWordCorner, getWordRow, pickQuizOptions } from '@/data/martWords';
@@ -16,7 +15,6 @@ import { MART_STAGE_STEPS } from '@/enums';
 import { useMartStore } from '@/store/useMartStore';
 
 const STAGE_TITLES: Record<(typeof MART_STAGE_STEPS)[number], 'mart' | 'word'> = {
-  problem: 'mart',
   meetWord: 'word',
   meaningQuiz: 'mart',
   listen: 'word',
@@ -64,7 +62,6 @@ export default function MartStageScreen() {
   return (
     <SafeAreaView className="flex-1 bg-white">
       <MartTopBar title={title} onBack={handleBack} />
-      {stageStep === 'problem' && <StageProblem onNext={advanceStep} />}
       {stageStep === 'meetWord' && <StageMeetWord word={word} onNext={advanceStep} />}
       {stageStep === 'meaningQuiz' && (
         <StageMeaningQuiz word={word} options={meaningOptions} onCorrect={advanceStep} />
@@ -73,7 +70,9 @@ export default function MartStageScreen() {
       {stageStep === 'soundQuiz' && (
         <StageSoundQuiz word={word} options={soundOptions} onCorrect={advanceStep} />
       )}
-      {stageStep === 'assemble' && <StageAssemble syllables={syllables} onCorrect={advanceStep} />}
+      {stageStep === 'assemble' && (
+        <StageAssemble word={word} syllables={syllables} onCorrect={advanceStep} />
+      )}
       {stageStep === 'correct' && (
         <StageCorrectResult
           word={word}

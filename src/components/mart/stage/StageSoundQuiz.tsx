@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View } from 'react-native';
+import { useMartWordSound } from '@/hooks/useMartWordSound';
 import { MartOptionRow } from '../MartOptionRow';
 import { MartRoundButton } from '../MartRoundButton';
 
@@ -11,6 +12,7 @@ interface StageSoundQuizProps {
 
 export function StageSoundQuiz({ word, options, onCorrect }: StageSoundQuizProps) {
   const [selected, setSelected] = useState<string | null>(null);
+  const playWordSound = useMartWordSound(word);
 
   function handleSelect(option: string) {
     setSelected(option);
@@ -24,9 +26,7 @@ export function StageSoundQuiz({ word, options, onCorrect }: StageSoundQuizProps
       <MartRoundButton
         variant="secondary"
         icon="sound"
-        onPress={() => {
-          // TODO: 오디오 에셋 연결
-        }}
+        onPress={playWordSound}
       />
       <View className="w-[300px] gap-3">
         {options.map((option) => (

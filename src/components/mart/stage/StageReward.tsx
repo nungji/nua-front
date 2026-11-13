@@ -1,5 +1,6 @@
 import { View } from 'react-native';
 import { useStageRouter } from '@/hooks/useStageRouter';
+import { getMartWordImage } from '@/data/martWordImages';
 import { MartIcon } from '../MartIcon';
 import { MartImagePlaceholder } from '../MartImagePlaceholder';
 import { MartRoundButton } from '../MartRoundButton';
@@ -20,8 +21,8 @@ export function StageReward({ word, cornerCleared }: StageRewardProps) {
         <MartIcon name="star" />
         <MartIcon name="star" />
       </View>
-      <MartWordCard label={word} />
-      <MartImagePlaceholder className="w-[300px] h-[150px] rounded-2xl" />
+      <MartWordCard label={word} imageSrc={getMartWordImage(word)} />
+      <MartImagePlaceholder imageSrc={getMartWordImage(word)} className="w-[300px] h-[150px] rounded-2xl" />
       <View className="flex-row gap-4">
         <MartRoundButton variant="secondary" icon="book" onPress={() => go('/games/mart/wordbook')} />
         <MartRoundButton

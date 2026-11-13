@@ -1,4 +1,6 @@
 import { Text, View } from 'react-native';
+import { getMartWordImage } from '@/data/martWordImages';
+import { useMartWordSound } from '@/hooks/useMartWordSound';
 import { MartImagePlaceholder } from '../MartImagePlaceholder';
 import { MartRoundButton } from '../MartRoundButton';
 
@@ -9,10 +11,11 @@ interface StageListenProps {
 
 export function StageListen({ word, onNext }: StageListenProps) {
   const syllables = Array.from(word);
+  const playWordSound = useMartWordSound(word);
 
   return (
     <View className="flex-1 items-center justify-between py-6">
-      <MartImagePlaceholder className="w-[220px] h-[160px] rounded-2xl" />
+      <MartImagePlaceholder imageSrc={getMartWordImage(word)} className="w-[220px] h-[160px] rounded-2xl" />
       <View className="flex-row flex-wrap justify-center gap-4">
         {syllables.map((syllable, index) => (
           <View key={index} className="w-[120px] h-[120px] rounded-2xl bg-gray-100 items-center justify-center">
@@ -23,9 +26,7 @@ export function StageListen({ word, onNext }: StageListenProps) {
       <MartRoundButton
         variant="secondary"
         icon="sound"
-        onPress={() => {
-          // TODO: 오디오 에셋 연결
-        }}
+        onPress={playWordSound}
       />
       <MartRoundButton variant="primary" icon="next" onPress={onNext} />
     </View>

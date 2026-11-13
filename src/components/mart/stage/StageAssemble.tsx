@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import type { MartJamoSlot, MartSyllableSlots } from '@/data/martWords';
-import { pickDistractorJamo } from '@/utils/hangul';
+import { getMartWordImage } from '@/data/martWordImages';
+import { pickDistractorJamo, vowelSitsBelow } from '@/utils/hangul';
+import { OceanBackground } from '../OceanBackground';
+import { OceanRetryButton } from '../OceanCircleButton';
+import { OceanProgressPill } from '../OceanDecor';
 import { MartImagePlaceholder } from '../MartImagePlaceholder';
-import { MartRoundButton } from '../MartRoundButton';
-import { MartTile } from '../MartTile';
 
 interface StageAssembleProps {
+  word: string;
   syllables: MartSyllableSlots[];
   onCorrect: () => void;
 }
@@ -17,6 +20,15 @@ interface FlatSlot {
   jamo: string;
   given: boolean;
 }
+
+// 뜻·소리 익히기 6단계 중 다섯 번째("글자 조립").
+const STEP_INDEX = 4;
+
+const TILE_GRADIENTS: [string, string][] = [
+  ['#FF9CCB', '#FF4F9A'],
+  ['#FFC7DE', '#FF8FB8'],
+  ['#FFE3F0', '#FFB3D1'],
+];
 
 function shuffle<T>(items: T[]): T[] {
   const copy = [...items];
@@ -37,7 +49,7 @@ function slotKey(slot: { syllableIndex: number; jamoIndex: number }): string {
   return `${slot.syllableIndex}-${slot.jamoIndex}`;
 }
 
-export function StageAssemble({ syllables, onCorrect }: StageAssembleProps) {
+export function StageAssemble({ word, syllables, onCorrect }: StageAssembleProps) {
   const blankSlots = useMemo(() => flattenSlots(syllables).filter((slot) => !slot.given), [syllables]);
 
   const [filled, setFilled] = useState<Record<string, string>>({});
@@ -84,30 +96,74 @@ export function StageAssemble({ syllables, onCorrect }: StageAssembleProps) {
     setShowIncorrect(false);
   }
 
-  if (showIncorrect) {
-    return (
-      <View className="flex-1 items-center justify-between py-6">
-        <SlotRow syllables={syllables} filled={filled} showErrors />
-        <MartImagePlaceholder className="w-[350px] h-[300px] rounded-2xl" />
-        <MartRoundButton variant="primary" icon="retry" onPress={handleRetry} />
-      </View>
-    );
-  }
-
   return (
-    <View className="flex-1 items-center justify-between py-6">
-      <MartImagePlaceholder className="w-[350px] h-[130px] rounded-2xl" />
-      <SlotRow syllables={syllables} filled={filled} />
-      <View className="flex-row flex-wrap gap-3 w-[320px] justify-center">
-        {bank.map((jamo, index) => (
-          <MartTile key={`${jamo}-${index}`} glyph={jamo} onPress={() => handleTilePress(index, jamo)} />
-        ))}
+    <OceanBackground>
+      <View style={{ paddingHorizontal: 14, paddingTop: 10 }}>
+        <OceanProgressPill stepIndex={STEP_INDEX} />
       </View>
-    </View>
+      {showIncorrect ? (
+        <View className="flex-1 items-center justify-between py-6">
+          <ProductTagCard syllables={syllables} filled={filled} showErrors />
+          <View
+            style={{
+              width: 350,
+              height: 260,
+              borderRadius: 28,
+              backgroundColor: 'rgba(255,255,255,0.94)',
+              borderWidth: 4,
+              borderColor: '#BFE3FF',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <MartImagePlaceholder imageSrc={getMartWordImage(word)} className="w-[280px] h-[200px] rounded-2xl" />
+          </View>
+          <OceanRetryButton onPress={handleRetry} />
+        </View>
+      ) : (
+        <View className="flex-1 items-center justify-between py-6">
+          <View
+            style={{
+              width: 350,
+              height: 110,
+              borderRadius: 24,
+              backgroundColor: 'rgba(255,255,255,0.94)',
+              borderWidth: 4,
+              borderColor: '#BFE3FF',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <MartImagePlaceholder imageSrc={getMartWordImage(word)} className="w-[300px] h-[80px] rounded-xl" />
+          </View>
+          <ProductTagCard syllables={syllables} filled={filled} />
+          <View className="flex-row flex-wrap gap-3 w-[320px] justify-center">
+            {bank.map((jamo, index) => (
+              <Pressable
+                key={`${jamo}-${index}`}
+                onPress={() => handleTilePress(index, jamo)}
+                style={{
+                  width: 64,
+                  height: 60,
+                  borderRadius: 30,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: TILE_GRADIENTS[index % TILE_GRADIENTS.length][1],
+                  borderWidth: 3,
+                  borderColor: '#FF5F9A',
+                }}
+              >
+                <Text style={{ fontSize: 22, fontWeight: '800', color: 'white' }}>{jamo}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      )}
+    </OceanBackground>
   );
 }
 
-function SlotRow({
+function ProductTagCard({
   syllables,
   filled,
   showErrors,
@@ -117,19 +173,69 @@ function SlotRow({
   showErrors?: boolean;
 }) {
   return (
-    <View className="flex-row flex-wrap gap-3 justify-center">
-      {syllables.map((syllable, syllableIndex) => (
-        <View key={syllableIndex} className="w-[84px] gap-1">
-          {syllable.map((slot, jamoIndex) => (
-            <JamoSlot
-              key={jamoIndex}
-              slot={slot}
-              filledJamo={filled[`${syllableIndex}-${jamoIndex}`]}
-              showErrors={showErrors}
-            />
-          ))}
-        </View>
-      ))}
+    <View
+      style={{
+        minWidth: 260,
+        borderRadius: 22,
+        backgroundColor: 'white',
+        borderWidth: 5,
+        borderColor: '#FF8A1F',
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+      }}
+    >
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 12 }}>
+        {syllables.map((syllable, syllableIndex) => (
+          <SyllableBlock
+            key={syllableIndex}
+            syllable={syllable}
+            syllableIndex={syllableIndex}
+            filled={filled}
+            showErrors={showErrors}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function SyllableBlock({
+  syllable,
+  syllableIndex,
+  filled,
+  showErrors,
+}: {
+  syllable: MartSyllableSlots;
+  syllableIndex: number;
+  filled: Record<string, string>;
+  showErrors?: boolean;
+}) {
+  const [cho, jung, jong] = syllable;
+  const belowLayout = vowelSitsBelow(jung.jamo);
+
+  const choSlot = <JamoSlot slot={cho} filledJamo={filled[`${syllableIndex}-0`]} showErrors={showErrors} />;
+  const jungSlot = <JamoSlot slot={jung} filledJamo={filled[`${syllableIndex}-1`]} showErrors={showErrors} />;
+  const jongSlot = jong ? (
+    <JamoSlot slot={jong} filledJamo={filled[`${syllableIndex}-2`]} showErrors={showErrors} />
+  ) : null;
+
+  return (
+    <View style={{ width: 84, gap: 4 }}>
+      {belowLayout ? (
+        <>
+          {choSlot}
+          {jungSlot}
+          {jongSlot}
+        </>
+      ) : (
+        <>
+          <View style={{ flexDirection: 'row', gap: 4 }}>
+            <View style={{ flex: 1 }}>{choSlot}</View>
+            <View style={{ flex: 1 }}>{jungSlot}</View>
+          </View>
+          {jongSlot}
+        </>
+      )}
     </View>
   );
 }
@@ -145,22 +251,42 @@ function JamoSlot({
 }) {
   const display = slot.given ? slot.jamo : filledJamo;
 
-  let colorClassName: string;
+  let backgroundColor = 'white';
+  let borderColor = '#FF7EB6';
+  let borderStyle: 'solid' | 'dashed' = 'dashed';
+  let textColor = '#1B3A6B';
+
   if (slot.given) {
-    colorClassName = 'bg-gray-200';
+    backgroundColor = '#A9DBFF';
+    borderColor = '#A9DBFF';
+    borderStyle = 'solid';
   } else if (display) {
     if (showErrors) {
-      colorClassName = filledJamo === slot.jamo ? 'bg-green-100' : 'bg-red-100';
+      const correct = filledJamo === slot.jamo;
+      backgroundColor = correct ? '#D7F5DD' : '#FFD9D9';
+      borderColor = correct ? '#33C24D' : '#FF5C5C';
     } else {
-      colorClassName = 'bg-green-100';
+      backgroundColor = '#FFC7DE';
+      borderColor = '#FF8FB8';
     }
-  } else {
-    colorClassName = 'bg-white border-2 border-dashed border-gray-300';
+    borderStyle = 'solid';
+    textColor = '#1B3A6B';
   }
 
   return (
-    <View className={`h-[32px] rounded-lg items-center justify-center ${colorClassName}`}>
-      {display ? <Text className="text-lg font-bold">{display}</Text> : null}
+    <View
+      style={{
+        height: 36,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor,
+        borderWidth: 2.5,
+        borderColor,
+        borderStyle,
+      }}
+    >
+      {display ? <Text style={{ fontSize: 17, fontWeight: '800', color: textColor }}>{display}</Text> : null}
     </View>
   );
 }

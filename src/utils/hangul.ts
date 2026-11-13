@@ -43,6 +43,14 @@ export function syllableJamoList(syllable: HangulSyllable): string[] {
   return syllable.jong ? [syllable.cho, syllable.jung, syllable.jong] : [syllable.cho, syllable.jung];
 }
 
+// ㅏ·ㅓ·ㅣ 계열(세로모음)은 자음 옆에 붙고, ㅗ·ㅜ·ㅡ 계열과 그 복합모음(ㅘ·ㅝ·ㅢ 등)은
+// 자음 아래에 붙는다 — 글자 조립 화면에서 칸을 옆/아래 중 어디에 놓을지 이 기준으로 정한다.
+const RIGHT_SIDE_VOWELS = new Set(['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅣ']);
+
+export function vowelSitsBelow(jungJamo: string): boolean {
+  return !RIGHT_SIDE_VOWELS.has(jungJamo);
+}
+
 const DISTRACTOR_POOL = [...CHOSEONG, ...JUNGSEONG, ...JONGSEONG.filter(Boolean)];
 
 export function pickDistractorJamo(excluding: ReadonlySet<string>): string {

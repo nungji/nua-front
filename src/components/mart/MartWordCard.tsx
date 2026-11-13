@@ -1,9 +1,10 @@
 import { Text, View } from 'react-native';
+import type { ImageSourcePropType } from 'react-native';
 import { MartImagePlaceholder } from './MartImagePlaceholder';
 
 interface MartWordCardProps {
   label: string;
-  imageSrc?: string;
+  imageSrc?: ImageSourcePropType;
   locked?: boolean;
 }
 
