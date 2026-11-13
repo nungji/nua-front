@@ -10,6 +10,8 @@ import { LINE, WOOD, WOOD_DARK } from './colors';
 
 type StallProps = {
   width: number;
+  height: number;
+  landscape: boolean;
   customer: CustomerId;
   customerMood?: Mood;
   items?: ItemId[];
@@ -20,7 +22,6 @@ type StallProps = {
   entering?: boolean;
 };
 
-const TILE = 74;
 const COUNTER_BOTTOM = '15%';
 
 /** Shelf rows: four on the top board, the rest on the lower one. */
@@ -30,6 +31,8 @@ function splitRows(items: ItemId[]) {
 
 export function Stall({
   width,
+  height,
+  landscape,
   customer,
   customerMood = 'sad',
   items,
@@ -39,9 +42,11 @@ export function Stall({
   handover = null,
   entering = false
 }: StallProps) {
-  const customerWidth = Math.min(172, width * 0.42);
-  const keeperWidth = Math.min(160, width * 0.4);
-  const rows = items ? splitRows(items) : [];
+  const rows = items ? (landscape ? [items] : splitRows(items)) : [];
+  const perRow = rows[0]?.length ?? 4;
+  const tile = Math.min(landscape ? 78 : 74, Math.floor((width * 0.9 - (perRow - 1) * 8) / perRow));
+  const customerWidth = Math.min(landscape ? height * 0.62 : width * 0.42, 210);
+  const keeperWidth = Math.min(landscape ? height * 0.68 : width * 0.4, 200);
 
   const customerNode = <Customer id={customer} mood={customerMood} width={customerWidth} />;
 
@@ -54,18 +59,8 @@ export function Stall({
         <Path d="M24 96 V150 M72 96 V150 M120 96 V150 M168 96 V150" stroke="#EED9B6" strokeWidth={1.5} />
       </Svg>
 
-      {/* hanging lamp in the empty wall band */}
-      <View style={{ position: 'absolute', top: '31%', alignSelf: 'center' }}>
-        <Svg width={64} height={74} viewBox="0 0 64 74">
-          <Path d="M32 0 V18" stroke="#8A6446" strokeWidth={3} />
-          <Path d="M14 32 Q32 16 50 32 Z" fill="#2F8F72" />
-          <Rect x={14} y={31} width={36} height={4} rx={2} fill="#237156" />
-          <Circle cx={32} cy={42} r={5} fill="#FBE08A" />
-        </Svg>
-      </View>
-
       {/* left doorway */}
-      <View style={{ position: 'absolute', left: 0, bottom: 0, width: width * 0.17, height: '62%' }}>
+      <View style={{ position: 'absolute', left: 0, bottom: 0, width: width * 0.15, height: '78%' }}>
         <Svg width="100%" height="100%" viewBox="0 0 56 150" preserveAspectRatio="none">
           <Rect x={0} y={0} width={56} height={150} fill="#8A6446" />
           <Rect x={7} y={8} width={42} height={142} fill="#FBE7C0" />
@@ -87,7 +82,7 @@ export function Stall({
 
       {/* display shelf */}
       {items ? (
-        <View style={{ position: 'absolute', top: 10, left: width * 0.04, right: width * 0.04 }}>
+        <View style={{ position: 'absolute', top: landscape ? 6 : 10, left: width * 0.04, right: width * 0.04 }}>
           <View
             style={{
               borderRadius: 20,
@@ -118,8 +113,8 @@ export function Stall({
                           }
                         }}
                         style={{
-                          width: TILE,
-                          height: TILE,
+                          width: tile,
+                          height: tile,
                           alignItems: 'center',
                           justifyContent: 'center',
                           borderRadius: 16,
@@ -129,7 +124,7 @@ export function Stall({
                           opacity: used ? 0.45 : 1
                         }}
                       >
-                        <ItemArt id={item} width={60} />
+                        <ItemArt id={item} width={Math.round(tile * 0.8)} />
                       </View>
                     );
                   })}
@@ -151,7 +146,7 @@ export function Stall({
       ) : null}
 
       {/* shopkeeper behind the counter */}
-      <View style={{ position: 'absolute', right: width * 0.02, bottom: COUNTER_BOTTOM }}>
+      <View style={{ position: 'absolute', right: width * 0.02, bottom: '9%' }}>
         <Shopkeeper width={keeperWidth} />
       </View>
 
@@ -175,7 +170,7 @@ export function Stall({
 
       {/* handover object over the counter */}
       {handover ? (
-        <View style={{ position: 'absolute', left: width * 0.44, bottom: '17%' }}>
+        <View style={{ position: 'absolute', left: width * 0.43, bottom: '13.5%' }}>
           <ItemArt id={handover} width={58} />
         </View>
       ) : null}
@@ -184,12 +179,12 @@ export function Stall({
       {entering ? (
         <Animated.View
           entering={SlideInLeft.springify().damping(16)}
-          style={{ position: 'absolute', left: width * 0.04, bottom: '2%' }}
+          style={{ position: 'absolute', left: width * 0.07, bottom: '2%' }}
         >
           {customerNode}
         </Animated.View>
       ) : (
-        <View style={{ position: 'absolute', left: width * 0.04, bottom: '2%' }}>{customerNode}</View>
+        <View style={{ position: 'absolute', left: width * 0.07, bottom: '2%' }}>{customerNode}</View>
       )}
 
       <View

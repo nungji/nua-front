@@ -130,13 +130,13 @@ export function Customer({ id, mood = 'sad', width = 120 }: Props) {
       {id === 'squirrel' ? (
         <>
           <Path
-            d="M78 100 Q106 84 100 56 Q96 40 82 42 Q73 47 77 58 Q88 66 86 80 Q84 92 68 98 Z"
+            d="M74 100 Q98 96 97 76 Q96 62 85 63 Q76 66 79 76 Q84 86 68 94 Z"
             fill={coat.fur}
           />
           <Path
-            d="M82 96 Q96 82 92 62 Q89 52 83 52 Q86 64 84 76 Q82 88 74 94 Z"
+            d="M80 96 Q92 90 91 76 Q90 68 85 69 Q88 78 84 86 Q81 92 74 94 Z"
             fill={coat.inner}
-            opacity={0.55}
+            opacity={0.5}
           />
         </>
       ) : null}

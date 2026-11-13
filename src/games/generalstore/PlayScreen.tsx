@@ -18,6 +18,7 @@ import type { ItemId } from './game/types';
 const VERDICT_DELAY = 900;
 /** How long a failed attempt stays on screen before the shop comes back. */
 const FAIL_DELAY = 1600;
+const GAP = 10;
 
 type Phase = 'comic' | 'shelf' | 'hand' | 'use' | 'result';
 
@@ -51,7 +52,9 @@ function Progress({ cleared, current }: { cleared: number[]; current: number }) 
 export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   const stage = findStage(stageId);
   const cuts = stageComic(stage);
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const landscape = width > height;
+
   const cleared = useGeneralStore((state) => state.cleared);
   const misses = useGeneralStore((state) => state.misses[stageId] ?? 0);
   const openStage = useGeneralStore((state) => state.openStage);
@@ -112,7 +115,15 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   }, [outcome, picked]);
 
   const hintItem = misses >= 2 ? stage.answer : null;
-  const size = width - 40;
+
+  // The body box drives every panel, so landscape and portrait both get sane art sizes.
+  const bodyWidth = width - (landscape ? 32 : 32);
+  const bodyHeight = Math.max(150, height - (landscape ? 96 : 176));
+
+  const comicWidth = landscape
+    ? Math.min((bodyWidth - GAP) / 2, (bodyHeight * 4) / 3)
+    : Math.min(bodyWidth, ((bodyHeight - GAP) / 2) * (4 / 3));
+  const comicHeight = (comicWidth * 3) / 4;
 
   function advance() {
     if (phase === 'comic') {
@@ -121,10 +132,6 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       } else {
         setPhase('shelf');
       }
-      return;
-    }
-
-    if (phase === 'shelf') {
       return;
     }
 
@@ -161,25 +168,25 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
     return (
       <>
         {outcome === 'fail' && stage.failEffect === 'leak' ? (
-          <View style={{ position: 'absolute', left: size * 0.44, bottom: size * 0.16 }}>
+          <View style={{ position: 'absolute', left: '46%', bottom: '18%' }}>
             <FallingDrops color={WATER} travel={46} />
           </View>
         ) : null}
 
         {outcome === 'fail' && stage.failEffect === 'soak' ? (
-          <View style={{ position: 'absolute', left: size * 0.44, top: size * 0.24 }}>
+          <View style={{ position: 'absolute', left: '46%', top: '22%' }}>
             <FallingDrops color="#7FB6D6" travel={42} />
           </View>
         ) : null}
 
         {outcome === 'fail' && stage.failEffect === 'steam' ? (
-          <View style={{ position: 'absolute', left: size * 0.46, top: size * 0.18 }}>
+          <View style={{ position: 'absolute', left: '48%', top: '16%' }}>
             <SteamWisps />
           </View>
         ) : null}
 
         {outcome === 'success' ? (
-          <View style={{ position: 'absolute', left: size * 0.4, top: size * 0.14 }}>
+          <View style={{ position: 'absolute', left: '42%', top: '10%' }}>
             <Sparkles />
           </View>
         ) : null}
@@ -187,10 +194,10 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
         {outcome === 'pending' ? null : (
           <Animated.View entering={ZoomIn.duration(200)} style={{ position: 'absolute', right: 14, top: 14 }}>
             <View
-              className="h-11 w-11 items-center justify-center rounded-full"
+              className="h-10 w-10 items-center justify-center rounded-full"
               style={{ backgroundColor: outcome === 'success' ? '#4FAE80' : '#D9695E' }}
             >
-              {outcome === 'success' ? <CheckIcon size={20} /> : <CrossIcon size={18} />}
+              {outcome === 'success' ? <CheckIcon size={18} /> : <CrossIcon size={16} />}
             </View>
           </Animated.View>
         )}
@@ -198,28 +205,37 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
     );
   }
 
+  function nextButton(label: string) {
+    return (
+      <Pressable
+        onPress={advance}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        className="items-center justify-center rounded-full"
+        style={{ width: 48, height: 48, backgroundColor: ACCENT }}
+      >
+        <ForwardIcon size={20} />
+      </Pressable>
+    );
+  }
+
   function renderFooter() {
     if (phase === 'comic') {
       return (
-        <View className="flex-row items-center justify-between px-5 pb-5 pt-2">
-          <View style={{ width: 52 }} />
+        <View
+          className="flex-row items-center px-4 pb-3 pt-2"
+          style={{ justifyContent: 'space-between' }}
+        >
+          <View style={{ width: 48 }} />
           <CutDots count={cuts.length} index={cut} color={ACCENT} />
-          <Pressable
-            onPress={advance}
-            accessibilityRole="button"
-            accessibilityLabel="다음 컷"
-            className="h-12 w-12 items-center justify-center rounded-full"
-            style={{ backgroundColor: ACCENT }}
-          >
-            <ForwardIcon size={22} />
-          </Pressable>
+          {nextButton('다음 컷')}
         </View>
       );
     }
 
     if (phase === 'shelf') {
       return (
-        <View className="items-center pb-5 pt-2">
+        <View className="items-center pb-3 pt-1">
           <Text className="text-sm" style={{ color: MUTED }}>
             손님에게 줄 물건을 골라 주세요
           </Text>
@@ -228,79 +244,77 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
     }
 
     if (phase === 'hand' || phase === 'use') {
-      const step = phase === 'hand' ? 0 : 1;
-
       return (
-        <View className="flex-row items-center justify-between px-5 pb-5 pt-2">
-          <View style={{ width: 52 }} />
-          <CutDots count={3} index={step} color={ACCENT} />
-          <Pressable
-            onPress={advance}
-            accessibilityRole="button"
-            accessibilityLabel="다음 컷"
-            className="h-12 w-12 items-center justify-center rounded-full"
-            style={{ backgroundColor: ACCENT }}
-          >
-            <ForwardIcon size={22} />
-          </Pressable>
+        <View className="flex-row items-center px-4 pb-3 pt-2" style={{ justifyContent: 'space-between' }}>
+          <View style={{ width: 48 }} />
+          <CutDots count={3} index={phase === 'hand' ? 0 : 1} color={ACCENT} />
+          {nextButton('다음 컷')}
         </View>
       );
     }
 
     if (outcome === 'success') {
       return (
-        <View className="items-center pb-5 pt-2">
+        <View className="items-center pb-3 pt-1">
           <Pressable
             onPress={onExit}
             accessibilityRole="button"
             accessibilityLabel="가게로"
-            className="flex-row items-center justify-center rounded-full px-7 py-3"
+            className="flex-row items-center justify-center rounded-full px-6 py-2.5"
             style={{ backgroundColor: ACCENT, gap: 8 }}
           >
-            <Text className="text-lg font-bold text-white">가게로</Text>
-            <ForwardIcon size={18} />
+            <Text className="text-base font-bold text-white">가게로</Text>
+            <ForwardIcon size={16} />
           </Pressable>
         </View>
       );
     }
 
     return (
-      <View className="flex-row items-center justify-between px-5 pb-5 pt-2">
-        <View style={{ width: 52 }} />
+      <View className="flex-row items-center px-4 pb-3 pt-2" style={{ justifyContent: 'center' }}>
         <CutDots count={3} index={2} color={ACCENT} />
-        <View style={{ width: 52 }} />
       </View>
     );
   }
 
   return (
     <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: BG }}>
-      <View className="flex-row items-center justify-between px-5 pb-2 pt-3">
+      <View className="flex-row items-center justify-between px-4 pb-1 pt-2">
         <Pressable onPress={onExit} hitSlop={16} accessibilityRole="button" accessibilityLabel="나가기">
-          <BackIcon />
+          <BackIcon size={22} />
         </Pressable>
-        <Text className="text-xl font-bold" style={{ color: INK }}>
+        <Text className="text-lg font-bold" style={{ color: INK }}>
           {stage.name} 손님
         </Text>
         <Progress cleared={cleared} current={stageId} />
       </View>
 
-      <View className="mx-4 flex-1 justify-center">
-        {phase === 'comic'
-          ? cuts.slice(cut - (cut % 2), cut - (cut % 2) + 2).map((item, index) => (
-              <View key={`cut-${cut}-${index}`} style={{ marginBottom: 10 }}>
-                <ComicPanel cut={item} size={size} />
-              </View>
-            ))
-          : null}
+      <View className="mx-4 flex-1">
+        {phase === 'comic' ? (
+          <View
+            className="flex-1 items-center justify-center"
+            style={{ flexDirection: landscape ? 'row' : 'column', gap: GAP }}
+          >
+            {cuts.slice(cut - (cut % 2), cut - (cut % 2) + 2).map((item, index) => (
+              <ComicPanel
+                key={`cut-${cut}-${index}`}
+                cut={item}
+                width={comicWidth}
+                height={comicHeight}
+              />
+            ))}
+          </View>
+        ) : null}
 
         {phase === 'shelf' || phase === 'hand' ? (
           <View
-            className="flex-1 overflow-hidden rounded-[26px] border-[3px]"
+            className="flex-1 overflow-hidden rounded-[22px] border-[3px]"
             style={{ borderColor: LINE, backgroundColor: outcome === 'success' ? ACCENT_SOFT : undefined }}
           >
             <Stall
-              width={size}
+              width={bodyWidth}
+              height={bodyHeight}
+              landscape={landscape}
               customer={stage.customer}
               customerMood="sad"
               items={stage.shelf}
@@ -316,7 +330,8 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
         {phase === 'use' || phase === 'result' ? (
           <SceneCut
             cut={useCut}
-            size={size}
+            width={bodyWidth}
+            height={bodyHeight}
             fixed={outcome === 'success'}
             overlay={phase === 'result' ? renderResultOverlay() : null}
           />
