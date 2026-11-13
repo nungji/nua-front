@@ -1,3 +1,4 @@
+import { comicFor } from './comics';
 import { ItemId, Stage } from './types';
 
 export const ITEM_LABELS: Record<ItemId, string> = {
@@ -28,8 +29,9 @@ export const STAGES: Stage[] = [
     problem: 'dryFlower',
     need: 'water',
     answer: 'bucket',
-    shelf: ['sock', 'bucket', 'basket'],
-    failEffect: 'leak'
+    shelf: ['sock', 'bucket', 'basket', 'fan', 'towel', 'broom', 'shovel'],
+    failEffect: 'leak',
+    comic: []
   },
   {
     id: 2,
@@ -38,8 +40,9 @@ export const STAGES: Stage[] = [
     problem: 'rainWalk',
     need: 'rain',
     answer: 'umbrella',
-    shelf: ['fan', 'towel', 'umbrella'],
-    failEffect: 'soak'
+    shelf: ['fan', 'towel', 'sock', 'umbrella', 'ladle', 'basket', 'shovel'],
+    failEffect: 'soak',
+    comic: []
   },
   {
     id: 3,
@@ -48,8 +51,9 @@ export const STAGES: Stage[] = [
     problem: 'hotPot',
     need: 'heat',
     answer: 'mitten',
-    shelf: ['ladle', 'towel', 'mitten'],
-    failEffect: 'steam'
+    shelf: ['ladle', 'towel', 'mitten', 'sock', 'fan', 'basket', 'broom'],
+    failEffect: 'steam',
+    comic: []
   },
   {
     id: 4,
@@ -58,8 +62,9 @@ export const STAGES: Stage[] = [
     problem: 'leafYard',
     need: 'leaves',
     answer: 'broom',
-    shelf: ['fan', 'shovel', 'broom'],
-    failEffect: 'none'
+    shelf: ['broom', 'fan', 'shovel', 'sock', 'towel', 'ladle', 'basket'],
+    failEffect: 'none',
+    comic: []
   },
   {
     id: 5,
@@ -68,11 +73,16 @@ export const STAGES: Stage[] = [
     problem: 'highFruit',
     need: 'high',
     answer: 'longStick',
-    shelf: ['shortStick', 'longStick', 'basket'],
-    failEffect: 'none'
+    shelf: ['shortStick', 'ladle', 'sock', 'towel', 'longStick', 'basket', 'mitten'],
+    failEffect: 'none',
+    comic: []
   }
 ];
 
 export function findStage(stageId: number) {
   return STAGES.find((stage) => stage.id === stageId) ?? STAGES[0];
+}
+
+export function stageComic(stage: Stage) {
+  return stage.comic.length > 0 ? stage.comic : comicFor(stage);
 }

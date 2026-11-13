@@ -1,28 +1,25 @@
 import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
 import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useGeneralStore } from '@/store/useGeneralStore';
 
-import { Customer } from './art/Customer';
+import { ComicPanel, CutDots, SceneCut } from './art/Comic';
 import { FallingDrops, Sparkles, SteamWisps } from './art/Effects';
 import { BackIcon, CheckIcon, CrossIcon, ForwardIcon } from './art/Icons';
-import { ItemArt } from './art/Item';
-import { NeedIcon } from './art/NeedIcon';
-import { ProblemArt } from './art/Problem';
-import { ACCENT, ACCENT_SOFT, BG, CARD, INK, LINE, MUTED, WATER, WOOD } from './art/colors';
-import { findStage, ITEM_LABELS, STAGES } from './game/stages';
+import { Stall } from './art/Stall';
+import { ACCENT, ACCENT_SOFT, BG, INK, LINE, MUTED, WATER } from './art/colors';
+import { USE_BG } from './game/comics';
+import { findStage, STAGES, stageComic } from './game/stages';
 import type { ItemId } from './game/types';
 
-/** How long the item sits in the customer's hands before the answer is revealed. */
-const USE_DELAY = 900;
-/** How long the failed attempt stays on screen before the shelf comes back. */
-const FAIL_DELAY = 1500;
-const HINT_AFTER_MISSES = 2;
+/** How long the result cut waits before it commits the answer. */
+const VERDICT_DELAY = 900;
+/** How long a failed attempt stays on screen before the shop comes back. */
+const FAIL_DELAY = 1600;
 
-type Phase = 'story' | 'shelf' | 'using' | 'fail' | 'done';
+type Phase = 'comic' | 'shelf' | 'hand' | 'use' | 'result';
 
 type PlayScreenProps = {
   stageId: number;
@@ -42,7 +39,7 @@ function Progress({ cleared, current }: { cleared: number[]; current: number }) 
             style={{
               width: done ? 14 : 9,
               height: 9,
-              backgroundColor: done ? ACCENT : stage.id === current ? WOOD : LINE
+              backgroundColor: done ? ACCENT : stage.id === current ? '#C08A5E' : LINE
             }}
           />
         );
@@ -53,6 +50,7 @@ function Progress({ cleared, current }: { cleared: number[]; current: number }) 
 
 export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   const stage = findStage(stageId);
+  const cuts = stageComic(stage);
   const { width } = useWindowDimensions();
   const cleared = useGeneralStore((state) => state.cleared);
   const misses = useGeneralStore((state) => state.misses[stageId] ?? 0);
@@ -60,245 +58,160 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   const clearStage = useGeneralStore((state) => state.clearStage);
   const reject = useGeneralStore((state) => state.reject);
 
-  const [phase, setPhase] = useState<Phase>('story');
+  const [phase, setPhase] = useState<Phase>('comic');
+  const [cut, setCut] = useState(0);
   const [picked, setPicked] = useState<ItemId | null>(null);
   const [tried, setTried] = useState<ItemId[]>([]);
+  const [outcome, setOutcome] = useState<'pending' | 'success' | 'fail'>('pending');
+  const [hasEntered, setHasEntered] = useState(false);
 
   useEffect(() => {
     openStage(stageId);
   }, [stageId, openStage]);
 
   useEffect(() => {
-    if (phase !== 'using' || picked === null) {
+    if (phase !== 'shelf' || hasEntered) {
+      return;
+    }
+
+    const timer = setTimeout(() => setHasEntered(true), 900);
+    return () => clearTimeout(timer);
+  }, [phase, hasEntered]);
+
+  useEffect(() => {
+    if (phase !== 'result' || picked === null) {
       return;
     }
 
     const timer = setTimeout(() => {
       if (picked === stage.answer) {
         clearStage(stageId);
-        setPhase('done');
+        setOutcome('success');
       } else {
         reject(stageId);
-        setPhase('fail');
+        setOutcome('fail');
       }
-    }, USE_DELAY);
+    }, VERDICT_DELAY);
 
     return () => clearTimeout(timer);
   }, [phase, picked, stage.answer, stageId, clearStage, reject]);
 
   useEffect(() => {
-    if (phase !== 'fail' || picked === null) {
+    if (outcome !== 'fail' || picked === null) {
       return;
     }
 
     const timer = setTimeout(() => {
       setTried((current) => [...current, picked]);
       setPicked(null);
+      setOutcome('pending');
       setPhase('shelf');
     }, FAIL_DELAY);
 
     return () => clearTimeout(timer);
-  }, [phase, picked]);
+  }, [outcome, picked]);
 
-  const hint = misses >= HINT_AFTER_MISSES && !tried.includes(stage.answer);
-  const scale = Math.min(1, (width - 56) / 348);
+  const hintItem = misses >= 2 ? stage.answer : null;
+  const size = width - 40;
 
-  /** A yard is a wide strip, a potted plant is tall; give the wide one more room. */
-  function propWidth(base: number) {
-    return Math.round((stage.problem === 'leafYard' ? base * 1.24 : base) * scale);
-  }
+  function advance() {
+    if (phase === 'comic') {
+      if (cut + 2 <= cuts.length - 1) {
+        setCut(cut + 2);
+      } else {
+        setPhase('shelf');
+      }
+      return;
+    }
 
-  function nextPanel() {
-    setPhase('shelf');
+    if (phase === 'shelf') {
+      return;
+    }
+
+    if (phase === 'hand') {
+      setPhase('use');
+      return;
+    }
+
+    if (phase === 'use') {
+      setPhase('result');
+    }
   }
 
   function pick(item: ItemId) {
     setPicked(item);
-    setPhase('using');
+    setOutcome('pending');
+    setPhase('hand');
   }
 
-  function comicFrame(children: ReactNode) {
-    return (
-      <View
-        className="flex-1 flex-row items-center justify-center rounded-[26px] border-2"
-        style={{ backgroundColor: '#FFF9EC', borderColor: LINE }}
-      >
-        {children}
-      </View>
-    );
-  }
+  const useCut = {
+    bg: USE_BG[stage.problem],
+    customer: stage.customer,
+    mood: (outcome === 'success' ? 'happy' : 'sad') as 'happy' | 'sad',
+    side: 'right' as const,
+    problem: stage.problem,
+    item: picked ?? undefined
+  };
 
-  function renderStory() {
-    return (
-      <Pressable
-        className="flex-1 px-3 py-3"
-        style={{ gap: 10 }}
-        onPress={nextPanel}
-        accessibilityRole="button"
-        accessibilityLabel="다음"
-      >
-        {comicFrame(
-          <>
-            <Customer id={stage.customer} mood="sad" width={Math.round(132 * scale)} />
-            <ProblemArt id={stage.problem} width={propWidth(136)} />
-          </>
-        )}
+  function renderResultOverlay() {
+    if (picked === null) {
+      return null;
+    }
 
-        {comicFrame(
-          <>
-            <Customer id={stage.customer} mood="sad" width={Math.round(120 * scale)} />
-            <View
-              className="ml-1 items-center justify-center rounded-[26px] border-[3px] px-5 py-5"
-              style={{ backgroundColor: '#FFFFFF', borderColor: LINE }}
-            >
-              <NeedIcon need={stage.need} size={Math.round(66 * scale)} />
-            </View>
-          </>
-        )}
-      </Pressable>
-    );
-  }
-
-  function renderShelf() {
     return (
-      <View className="flex-1 items-center justify-center">
-        <View className="flex-row items-end" style={{ gap: 12 }}>
-          <Customer id={stage.customer} mood="sad" width={Math.round(132 * scale)} />
-          <View
-            className="mb-4 rounded-[28px] border-[3px] px-5 py-5"
-            style={{ backgroundColor: '#FFFFFF', borderColor: LINE }}
-          >
-            <NeedIcon need={stage.need} size={Math.round(62 * scale)} />
+      <>
+        {outcome === 'fail' && stage.failEffect === 'leak' ? (
+          <View style={{ position: 'absolute', left: size * 0.44, bottom: size * 0.16 }}>
+            <FallingDrops color={WATER} travel={46} />
           </View>
-        </View>
-      </View>
-    );
-  }
+        ) : null}
 
-  /** The counter lives outside the scene card, so the shelf reads as furniture in front of it. */
-  function renderCounter() {
-    return (
-      <View className="mx-4 mt-3">
-        <View className="flex-row items-end justify-center" style={{ gap: 10 }}>
-          {stage.shelf.map((item) => {
-            const used = tried.includes(item);
-            const hinted = hint && item === stage.answer;
+        {outcome === 'fail' && stage.failEffect === 'soak' ? (
+          <View style={{ position: 'absolute', left: size * 0.44, top: size * 0.24 }}>
+            <FallingDrops color="#7FB6D6" travel={42} />
+          </View>
+        ) : null}
 
-            return (
-              <Pressable
-                key={item}
-                disabled={used}
-                onPress={() => pick(item)}
-                accessibilityRole="button"
-                accessibilityLabel={ITEM_LABELS[item]}
-                className="items-center justify-center rounded-[24px] border-[3px]"
-                style={{
-                  width: Math.round(100 * scale) + 8,
-                  height: Math.round(100 * scale) + 8,
-                  backgroundColor: used ? '#F2EADA' : '#FFF7E7',
-                  borderColor: hinted ? '#F2C14E' : used ? '#DCCBAE' : LINE,
-                  opacity: used ? 0.7 : 1
-                }}
-              >
-                <ItemArt id={item} width={Math.round(70 * scale)} />
-                {used ? (
-                  <View
-                    className="absolute right-1.5 top-1.5 h-6 w-6 items-center justify-center rounded-full"
-                    style={{ backgroundColor: '#C9B79A' }}
-                  >
-                    <CrossIcon size={12} />
-                  </View>
-                ) : null}
-              </Pressable>
-            );
-          })}
-        </View>
+        {outcome === 'fail' && stage.failEffect === 'steam' ? (
+          <View style={{ position: 'absolute', left: size * 0.46, top: size * 0.18 }}>
+            <SteamWisps />
+          </View>
+        ) : null}
 
-        <View style={{ height: 14, marginHorizontal: 4, marginTop: -1, borderRadius: 7, backgroundColor: WOOD }} />
-        <View
-          style={{ height: 5, marginHorizontal: 12, marginTop: 3, borderRadius: 3, backgroundColor: '#E0CDB0' }}
-        />
-      </View>
-    );
-  }
+        {outcome === 'success' ? (
+          <View style={{ position: 'absolute', left: size * 0.4, top: size * 0.14 }}>
+            <Sparkles />
+          </View>
+        ) : null}
 
-  function renderUse() {
-    const success = phase === 'done';
-    const itemSize = Math.round(78 * scale);
-
-    return (
-      <View className="flex-1 px-3 py-3">
-        {comicFrame(
-          <>
-            <Customer
-              id={stage.customer}
-              mood={success ? 'happy' : 'sad'}
-              width={Math.round(116 * scale)}
-            />
-
-            <View className="items-center justify-center" style={{ width: itemSize + 18 }}>
-              {picked === null ? null : (
-                <Animated.View entering={ZoomIn.duration(220)}>
-                  <ItemArt id={picked} width={itemSize} />
-                </Animated.View>
-              )}
-
-              {phase === 'fail' && stage.failEffect === 'leak' ? (
-                <View style={{ position: 'absolute', bottom: -18, left: 6 }}>
-                  <FallingDrops color={WATER} travel={46} />
-                </View>
-              ) : null}
-
-              {phase === 'fail' && stage.failEffect === 'soak' ? (
-                <View style={{ position: 'absolute', top: -24, left: 2 }}>
-                  <FallingDrops color="#7FB6D6" travel={42} />
-                </View>
-              ) : null}
-
-              {phase === 'fail' && stage.failEffect === 'steam' ? (
-                <View style={{ position: 'absolute', top: -20, left: 8 }}>
-                  <SteamWisps />
-                </View>
-              ) : null}
-
-              {success ? (
-                <View style={{ position: 'absolute', top: -30, left: 0 }}>
-                  <Sparkles />
-                </View>
-              ) : null}
-            </View>
-
-            <ProblemArt id={stage.problem} fixed={success} width={propWidth(112)} />
-          </>
-        )}
-
-        {phase === 'done' || phase === 'fail' ? (
-          <Animated.View entering={ZoomIn.duration(200)} style={{ position: 'absolute', right: 26, top: 26 }}>
+        {outcome === 'pending' ? null : (
+          <Animated.View entering={ZoomIn.duration(200)} style={{ position: 'absolute', right: 14, top: 14 }}>
             <View
               className="h-11 w-11 items-center justify-center rounded-full"
-              style={{ backgroundColor: success ? '#4FAE80' : '#D9695E' }}
+              style={{ backgroundColor: outcome === 'success' ? '#4FAE80' : '#D9695E' }}
             >
-              {success ? <CheckIcon size={20} /> : <CrossIcon size={18} />}
+              {outcome === 'success' ? <CheckIcon size={20} /> : <CrossIcon size={18} />}
             </View>
           </Animated.View>
-        ) : null}
-      </View>
+        )}
+      </>
     );
   }
 
   function renderFooter() {
-    if (phase === 'story') {
+    if (phase === 'comic') {
       return (
-        <View className="items-center pb-5 pt-1">
+        <View className="flex-row items-center justify-between px-5 pb-5 pt-2">
+          <View style={{ width: 52 }} />
+          <CutDots count={cuts.length} index={cut} color={ACCENT} />
           <Pressable
-            onPress={nextPanel}
+            onPress={advance}
             accessibilityRole="button"
-            accessibilityLabel="다음"
-            className="flex-row items-center justify-center rounded-full px-8 py-4"
-            style={{ backgroundColor: ACCENT, gap: 10 }}
+            accessibilityLabel="다음 컷"
+            className="h-12 w-12 items-center justify-center rounded-full"
+            style={{ backgroundColor: ACCENT }}
           >
-            <Text className="text-lg font-bold text-white">다음</Text>
-            <ForwardIcon size={18} />
+            <ForwardIcon size={22} />
           </Pressable>
         </View>
       );
@@ -306,17 +219,37 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
 
     if (phase === 'shelf') {
       return (
-        <View className="items-center pb-5 pt-1">
+        <View className="items-center pb-5 pt-2">
           <Text className="text-sm" style={{ color: MUTED }}>
-            어떤 물건을 줄까요?
+            손님에게 줄 물건을 골라 주세요
           </Text>
         </View>
       );
     }
 
-    if (phase === 'done') {
+    if (phase === 'hand' || phase === 'use') {
+      const step = phase === 'hand' ? 0 : 1;
+
       return (
-        <View className="items-center pb-5 pt-1">
+        <View className="flex-row items-center justify-between px-5 pb-5 pt-2">
+          <View style={{ width: 52 }} />
+          <CutDots count={3} index={step} color={ACCENT} />
+          <Pressable
+            onPress={advance}
+            accessibilityRole="button"
+            accessibilityLabel="다음 컷"
+            className="h-12 w-12 items-center justify-center rounded-full"
+            style={{ backgroundColor: ACCENT }}
+          >
+            <ForwardIcon size={22} />
+          </Pressable>
+        </View>
+      );
+    }
+
+    if (outcome === 'success') {
+      return (
+        <View className="items-center pb-5 pt-2">
           <Pressable
             onPress={onExit}
             accessibilityRole="button"
@@ -331,7 +264,13 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       );
     }
 
-    return <View style={{ height: 20 }} />;
+    return (
+      <View className="flex-row items-center justify-between px-5 pb-5 pt-2">
+        <View style={{ width: 52 }} />
+        <CutDots count={3} index={2} color={ACCENT} />
+        <View style={{ width: 52 }} />
+      </View>
+    );
   }
 
   return (
@@ -346,16 +285,43 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
         <Progress cleared={cleared} current={stageId} />
       </View>
 
-      <View
-        className="mx-4 flex-1 overflow-hidden rounded-[34px] border-[3px]"
-        style={{ backgroundColor: phase === 'done' ? ACCENT_SOFT : CARD, borderColor: LINE }}
-      >
-        {phase === 'story' ? renderStory() : null}
-        {phase === 'shelf' ? renderShelf() : null}
-        {phase === 'using' || phase === 'fail' || phase === 'done' ? renderUse() : null}
-      </View>
+      <View className="mx-4 flex-1 justify-center">
+        {phase === 'comic'
+          ? cuts.slice(cut - (cut % 2), cut - (cut % 2) + 2).map((item, index) => (
+              <View key={`cut-${cut}-${index}`} style={{ marginBottom: 10 }}>
+                <ComicPanel cut={item} size={size} />
+              </View>
+            ))
+          : null}
 
-      {phase === 'shelf' ? renderCounter() : null}
+        {phase === 'shelf' || phase === 'hand' ? (
+          <View
+            className="flex-1 overflow-hidden rounded-[26px] border-[3px]"
+            style={{ borderColor: LINE, backgroundColor: outcome === 'success' ? ACCENT_SOFT : undefined }}
+          >
+            <Stall
+              width={size}
+              customer={stage.customer}
+              customerMood="sad"
+              items={stage.shelf}
+              tried={tried}
+              hintItem={hintItem}
+              onPick={phase === 'shelf' ? pick : undefined}
+              handover={phase === 'hand' ? picked : null}
+              entering={phase === 'shelf' && !hasEntered}
+            />
+          </View>
+        ) : null}
+
+        {phase === 'use' || phase === 'result' ? (
+          <SceneCut
+            cut={useCut}
+            size={size}
+            fixed={outcome === 'success'}
+            overlay={phase === 'result' ? renderResultOverlay() : null}
+          />
+        ) : null}
+      </View>
 
       {renderFooter()}
     </SafeAreaView>
