@@ -1,8 +1,10 @@
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { StageBackdrop } from '@/components/StageBackdrop';
+import { TopBar } from '@/components/TopBar';
 import { useStageRouter } from '@/hooks/useStageRouter';
+import { COLORS, FONT } from '@/theme';
 
 import type { GameSceneProps } from '../types';
 
@@ -10,23 +12,15 @@ export function ExampleScene({ game }: GameSceneProps) {
   const { back } = useStageRouter();
 
   return (
-    <View className="flex-1 bg-[#0B1026]">
-      <StageBackdrop />
-      <SafeAreaView className="flex-1">
-        <View className="flex-1 items-center justify-center">
-          <Text className="text-base" style={{ color: game.accent }}>
-            {game.title}
-          </Text>
-          <Text className="mt-3 text-6xl font-bold text-white">Scene 1</Text>
-        </View>
+    <View className="flex-1" style={{ backgroundColor: COLORS.oceanDeep }}>
+      <StageBackdrop dim={0.1} />
 
-        <Pressable
-          onPress={() => back()}
-          hitSlop={16}
-          className="mx-auto mb-6 rounded-full border border-white/30 px-6 py-3"
-        >
-          <Text className="text-base text-white/80">나가기</Text>
-        </Pressable>
+      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+        <TopBar title={game.title} onBack={back} />
+
+        <View className="flex-1 items-center justify-center">
+          <Text style={{ fontFamily: FONT, fontSize: 64, color: COLORS.white }}>Scene 1</Text>
+        </View>
       </SafeAreaView>
     </View>
   );

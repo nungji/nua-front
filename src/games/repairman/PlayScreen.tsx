@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Path, Svg } from 'react-native-svg';
 
 import { GamePiece } from '@/components/GamePiece';
+import { StageBackdrop } from '@/components/StageBackdrop';
+import { TopBar } from '@/components/TopBar';
 import { PieceGraphic } from '@/components/PieceGraphic';
 import { pickPiece } from '@/games/repairman/game/hit';
 import {
@@ -23,6 +25,7 @@ import { piecePolygon } from '@/games/repairman/game/shapes';
 import { buildPuzzle, findStage, PIECE_PAD, SNAP_RADIUS, tiltFor } from '@/games/repairman/game/stages';
 import { Piece } from '@/games/repairman/game/types';
 import { useRepairmanStore } from '@/store/useRepairmanStore';
+import { COLORS, FONT, SHADOW } from '@/theme';
 
 const FIXED_STEP = 16.666;
 const FLIP_HOLD = 200;
@@ -365,18 +368,19 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   const gesture = Gesture.Exclusive(pan, longPress, tap);
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-row items-center justify-between px-5 pt-2">
-        <Pressable onPress={onExit} hitSlop={16}>
-          <Text className="text-lg text-gray-500">나가기</Text>
-        </Pressable>
-        <Text className="text-xl font-semibold text-gray-900">
-          {stage.id}. {puzzle.stageName}
-        </Text>
-        <Pressable onPress={reset} hitSlop={16}>
-          <Text className="text-lg text-gray-500">다시</Text>
-        </Pressable>
-      </View>
+    <View className="flex-1" style={{ backgroundColor: COLORS.oceanDeep }}>
+      <StageBackdrop dim={0.18} />
+
+      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+        <TopBar
+          title={`${stage.id}. ${puzzle.stageName}`}
+          onBack={onExit}
+          right={
+            <Pressable onPress={reset} hitSlop={8} accessibilityRole="button" accessibilityLabel="다시" style={styles.resetButton}>
+              <Text style={styles.resetText}>다시</Text>
+            </Pressable>
+          }
+        />
 
       <View className="flex-1 items-center justify-center">
         <GestureDetector gesture={gesture}>
@@ -466,7 +470,8 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
           </Text>
         )}
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -521,3 +526,22 @@ function Slot({ piece }: { piece: Piece }) {
     </View>
   );
 }
+
+const styles = {
+  resetButton: {
+    height: 44,
+    paddingHorizontal: 18,
+    borderRadius: 22,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: COLORS.white,
+    borderWidth: 4,
+    borderColor: COLORS.orange,
+    ...SHADOW.button
+  },
+  resetText: {
+    fontFamily: FONT,
+    fontSize: 18,
+    color: COLORS.orangeDeep
+  }
+};

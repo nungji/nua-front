@@ -4,7 +4,10 @@ import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Path, Svg } from 'react-native-svg';
 
+import { StageBackdrop } from '@/components/StageBackdrop';
+import { TopBar } from '@/components/TopBar';
 import { buildPuzzle, STAGES, stageHint } from '@/games/repairman/game/stages';
+import { COLORS, FONT, withAlpha } from '@/theme';
 import { StageConfig } from '@/games/repairman/game/types';
 import { buildGridLines, buildMapNodes, mapContentHeight } from '@/games/repairman/game/worldmap';
 
@@ -38,12 +41,13 @@ function buildPreview(stage: StageConfig): Preview {
 
 export function StageMap({ accent, onStart, onExit }: StageMapProps) {
   const { width } = useWindowDimensions();
+  const panelWidth = width - 32;
   const scrollRef = useRef<ScrollView>(null);
   const [selected, setSelected] = useState<number | null>(null);
 
   const contentHeight = mapContentHeight(STAGES.length);
-  const nodes = useMemo(() => buildMapNodes(STAGES.length, width), [width]);
-  const grid = useMemo(() => buildGridLines(width, contentHeight), [width, contentHeight]);
+  const nodes = useMemo(() => buildMapNodes(STAGES.length, panelWidth), [panelWidth]);
+  const grid = useMemo(() => buildGridLines(panelWidth, contentHeight), [panelWidth, contentHeight]);
   const previews = useMemo(() => {
     const map: Record<number, Preview> = {};
 
@@ -62,24 +66,22 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
   }, [contentHeight]);
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EAF2FB]" edges={['top']}>
-      <View className="flex-row items-center justify-between px-6 pb-2 pt-3">
-        <Pressable onPress={onExit} hitSlop={16}>
-          <Text className="text-base text-slate-400">나가기</Text>
-        </Pressable>
-        <Text className="text-3xl font-bold text-slate-900">수리공</Text>
-        <View style={{ width: 44 }} />
-      </View>
-      <Text className="px-6 pb-3 text-base text-slate-500">고칠 물건을 골라 주세요</Text>
+    <View className="flex-1" style={{ backgroundColor: COLORS.oceanDeep }}>
+      <StageBackdrop dim={0.28} />
 
-      <ScrollView
-        ref={scrollRef}
-        className="flex-1"
-        contentContainerStyle={{ height: contentHeight }}
-        showsVerticalScrollIndicator={false}
-      >
+      <SafeAreaView className="flex-1" edges={['top']}>
+        <TopBar title="수리공" onBack={onExit} />
+        <Text style={styles.hint}>고칠 물건을 골라 주세요</Text>
+
+      <View style={styles.mapPanel}>
+        <ScrollView
+          ref={scrollRef}
+          className="flex-1"
+          contentContainerStyle={{ height: contentHeight }}
+          showsVerticalScrollIndicator={false}
+        >
         {/* 배경 아트 자리 — 나중에 이 자리에 벡터 배경 이미지를 깔고, 격자/경로/스톤을 그 위 레이어로 둡니다. */}
-        <Svg width={width} height={contentHeight} style={{ position: 'absolute' }}>
+        <Svg width={panelWidth} height={contentHeight} style={{ position: 'absolute' }}>
           {grid.map((line, index) => (
             <Path
               key={`grid-${index}`}
@@ -90,7 +92,7 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
           ))}
         </Svg>
 
-        <Svg width={width} height={contentHeight} style={{ position: 'absolute' }}>
+        <Svg width={panelWidth} height={contentHeight} style={{ position: 'absolute' }}>
           <Path
             d={`M ${path}`}
             stroke="#E8A87C"
@@ -159,7 +161,8 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
             </Pressable>
           );
         })}
-      </ScrollView>
+        </ScrollView>
+      </View>
 
       {stage ? (
         <Animated.View
@@ -211,6 +214,25 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
           </View>
         </Animated.View>
       ) : null}
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
+
+const styles = {
+  mapPanel: {
+    flex: 1,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 28,
+    overflow: 'hidden' as const,
+    backgroundColor: withAlpha(COLORS.foam, 0.94)
+  },
+  hint: {
+    paddingHorizontal: 24,
+    paddingBottom: 12,
+    fontFamily: FONT,
+    fontSize: 17,
+    color: COLORS.foam
+  }
+};
