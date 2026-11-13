@@ -5,7 +5,8 @@ import type { SharedValue } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
 import { Game } from '@/games';
-import { CAROUSEL_SPRING } from '@/stage';
+import { CAROUSEL_SPRING, stageScale } from '@/stage';
+import { COLORS, FONT, SHADOW, TEXT_SHADOW } from '@/theme';
 
 /** Figma selector frame is 1280 x 832. */
 const DESIGN = {
@@ -26,10 +27,13 @@ type GameSlotProps = {
   size: number;
   activeSize: number;
   gap: number;
+  scale: number;
   onPress: () => void;
 };
 
-function GameSlot({ game, position, count, slot, size, activeSize, gap, onPress }: GameSlotProps) {
+function GameSlot({ game, position, count, slot, size, activeSize, gap, scale, onPress }: GameSlotProps) {
+  const Icon = game.icon;
+
   const style = useAnimatedStyle(() => {
     const wrapped = ((position - slot.value) % count + count) % count;
     const offset = wrapped >= count / 2 ? wrapped - count : wrapped;
@@ -38,7 +42,7 @@ function GameSlot({ game, position, count, slot, size, activeSize, gap, onPress 
 
     return {
       // fades out over the whole second slot so the spring overshoot cannot pop it back in
-      opacity: distance <= 1 ? 1 - 0.55 * distance : Math.max(0, 0.45 * (VISIBLE_SLOTS - distance)),
+      opacity: distance <= 1 ? 1 - 0.25 * distance : Math.max(0, 0.75 * (VISIBLE_SLOTS - distance)),
       transform: [{ translateX: offset * gap }, { scale: 1 + (activeSize / size - 1) * focus }]
     };
   });
@@ -49,10 +53,17 @@ function GameSlot({ game, position, count, slot, size, activeSize, gap, onPress 
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={game.title}
-        className="flex-1 items-center justify-center rounded-full"
-        style={{ backgroundColor: game.accent }}
+        style={[
+          styles.circle,
+          SHADOW.card,
+          { backgroundColor: game.accent, borderWidth: 6 * scale }
+        ]}
       >
-        <View className="rounded-full bg-white/25" style={{ width: size * 0.34, height: size * 0.34 }} />
+        {Icon ? (
+          <Icon width={size * 0.55} height={size * 0.55} />
+        ) : (
+          <View className="rounded-full bg-white/25" style={{ width: size * 0.34, height: size * 0.34 }} />
+        )}
       </Pressable>
     </Animated.View>
   );
@@ -64,8 +75,8 @@ type Props = {
 };
 
 export function GameSelector({ games, onSelect }: Props) {
-  const { width } = useWindowDimensions();
-  const scale = width / DESIGN.width;
+  const { width, height } = useWindowDimensions();
+  const scale = stageScale(width, height);
   const activeSize = DESIGN.active * scale;
   const sideSize = DESIGN.side * scale;
   const gap = DESIGN.slot * scale;
@@ -94,14 +105,15 @@ export function GameSelector({ games, onSelect }: Props) {
           size={sideSize}
           activeSize={activeSize}
           gap={gap}
+          scale={scale}
           onPress={() => (position === active ? onSelect(game) : setIndex(position))}
         />
       ))}
 
       <Text
         pointerEvents="none"
-        style={{ position: 'absolute', top: activeSize + 12, color: 'rgba(255,255,255,0.75)' }}
-        className="text-base"
+        numberOfLines={1}
+        style={[styles.label, TEXT_SHADOW, { top: activeSize + 14 * scale, fontSize: 28 * scale }]}
       >
         {games[active].title}
       </Text>
@@ -111,11 +123,17 @@ export function GameSelector({ games, onSelect }: Props) {
         hitSlop={12}
         accessibilityRole="button"
         accessibilityLabel="이전 게임"
-        style={{ position: 'absolute', left: '50%', marginLeft: -arrowOffset - arrowSize / 2, width: arrowSize, height: arrowSize }}
+        style={{
+          position: 'absolute',
+          left: '50%',
+          marginLeft: -arrowOffset - arrowSize / 2,
+          width: arrowSize,
+          height: arrowSize
+        }}
         className="items-center justify-center"
       >
         <Svg width="75%" height="75%" viewBox="0 0 24 32">
-          <Path d="M20 2 L4 16 L20 30 Z" fill="#FFFFFF" fillOpacity={0.85} />
+          <Path d="M20 2 L4 16 L20 30 Z" fill={COLORS.white} fillOpacity={0.95} />
         </Svg>
       </Pressable>
 
@@ -124,13 +142,35 @@ export function GameSelector({ games, onSelect }: Props) {
         hitSlop={12}
         accessibilityRole="button"
         accessibilityLabel="다음 게임"
-        style={{ position: 'absolute', left: '50%', marginLeft: arrowOffset - arrowSize / 2, width: arrowSize, height: arrowSize }}
+        style={{
+          position: 'absolute',
+          left: '50%',
+          marginLeft: arrowOffset - arrowSize / 2,
+          width: arrowSize,
+          height: arrowSize
+        }}
         className="items-center justify-center"
       >
         <Svg width="75%" height="75%" viewBox="0 0 24 32">
-          <Path d="M4 2 L20 16 L4 30 Z" fill="#FFFFFF" fillOpacity={0.85} />
+          <Path d="M4 2 L20 16 L4 30 Z" fill={COLORS.white} fillOpacity={0.95} />
         </Svg>
       </Pressable>
     </View>
   );
 }
+
+const styles = {
+  circle: {
+    flex: 1,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderRadius: 9999,
+    borderColor: COLORS.white
+  },
+  label: {
+    position: 'absolute' as const,
+    fontFamily: FONT,
+    color: COLORS.white,
+    textAlign: 'center' as const
+  }
+};
