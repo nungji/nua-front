@@ -34,12 +34,12 @@ export type MapNode = {
   scale: number;
 };
 
-export function mapContentHeight(count: number) {
-  return MAP.topPadding + MAP.bottomPadding + Math.max(0, count - 1) * MAP.stepY;
+export function mapContentHeight(count: number, stepY: number = MAP.stepY) {
+  return MAP.topPadding + MAP.bottomPadding + Math.max(0, count - 1) * stepY;
 }
 
-export function buildMapNodes(count: number, width: number): MapNode[] {
-  const height = mapContentHeight(count);
+export function buildMapNodes(count: number, width: number, stepY: number = MAP.stepY): MapNode[] {
+  const height = mapContentHeight(count, stepY);
   const nodes: MapNode[] = [];
 
   for (let index = 0; index < count; index += 1) {
@@ -48,7 +48,7 @@ export function buildMapNodes(count: number, width: number): MapNode[] {
     nodes.push({
       id: index + 1,
       x: width / 2 + Math.sin(index * MAP.swayFrequency) * MAP.sway,
-      y: height - MAP.bottomPadding - index * MAP.stepY,
+      y: height - MAP.bottomPadding - index * stepY,
       scale: 1 - depth * 0.16
     });
   }

@@ -10,7 +10,7 @@ import { buildPuzzle, STAGES, stageHint } from '@/games/repairman/game/stages';
 import { DESIGN_FRAME, stageScale } from '@/stage';
 import { COLORS, FONT, SHADOW, withAlpha } from '@/theme';
 import { StageConfig } from '@/games/repairman/game/types';
-import { buildGridLines, buildMapNodes, mapContentHeight } from '@/games/repairman/game/worldmap';
+import { buildGridLines, buildMapNodes, mapContentHeight, MAP } from '@/games/repairman/game/worldmap';
 
 const PREVIEW_BOARD = { width: 400, height: 288 };
 const STONE_SIZE = 66;
@@ -46,13 +46,15 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
   const panelWidth = width - 32;
   const mapWidth = Math.min(panelWidth, DESIGN_FRAME.width);
   const mapOffset = (panelWidth - mapWidth) / 2;
-  const stone = Math.round(STONE_SIZE * Math.min(scale, 1.4));
+  const stoneFactor = Math.min(scale, 1.4);
+  const stone = Math.round(STONE_SIZE * stoneFactor);
+  const stepY = MAP.stepY * stoneFactor;
   const sheetScale = Math.min(scale, 1.3);
   const scrollRef = useRef<ScrollView>(null);
   const [selected, setSelected] = useState<number | null>(null);
 
-  const contentHeight = mapContentHeight(STAGES.length);
-  const nodes = useMemo(() => buildMapNodes(STAGES.length, mapWidth), [mapWidth]);
+  const contentHeight = mapContentHeight(STAGES.length, stepY);
+  const nodes = useMemo(() => buildMapNodes(STAGES.length, mapWidth, stepY), [mapWidth, stepY]);
   const grid = useMemo(() => buildGridLines(mapWidth, contentHeight), [mapWidth, contentHeight]);
   const previews = useMemo(() => {
     const map: Record<number, Preview> = {};
@@ -91,7 +93,7 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
             <Path
               key={`grid-${index}`}
               d={`M${line.from.x},${line.from.y} L${line.to.x},${line.to.y}`}
-              stroke="#CBD8E8"
+              stroke={withAlpha(COLORS.oceanMid, 0.22)}
               strokeWidth={1}
             />
           ))}
@@ -100,7 +102,7 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
         <Svg width={mapWidth} height={contentHeight} style={{ position: 'absolute', left: mapOffset }}>
           <Path
             d={`M ${path}`}
-            stroke="#E8A87C"
+            stroke={COLORS.sand}
             strokeWidth={7}
             strokeDasharray="2 13"
             strokeLinecap="round"
@@ -134,7 +136,7 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
                   width: size * 0.86,
                   height: size * 0.3,
                   borderRadius: size,
-                  backgroundColor: '#C3CEDA'
+                  backgroundColor: withAlpha(COLORS.shadow, 0.18)
                 }}
               />
               <View
@@ -142,23 +144,19 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
                   width: size,
                   height: size,
                   borderRadius: size,
-                  backgroundColor: active ? accent : '#FFFFFF',
-                  borderWidth: active ? 3 : 2,
-                  borderColor: active ? '#FFFFFF' : '#F0A36B',
+                  backgroundColor: active ? accent : COLORS.white,
+                  borderWidth: active ? 4 : 3,
+                  borderColor: active ? COLORS.white : COLORS.sand,
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}
               >
-                <Text
-                  className={active ? 'font-bold text-white' : 'font-bold text-slate-700'}
-                  style={{ fontSize: size * 0.38 }}
-                >
+                <Text style={{ fontFamily: FONT, fontSize: size * 0.4, color: active ? COLORS.white : COLORS.oceanDeep }}>
                   {node.id}
                 </Text>
               </View>
               <Text
-                className="absolute text-[11px] font-medium text-slate-500"
-                style={{ top: size + 2 }}
+                style={{ position: 'absolute', top: size + 2, fontFamily: FONT, fontSize: 12 * stoneFactor, color: '#60708A' }}
                 numberOfLines={1}
               >
                 {stageItem.name}

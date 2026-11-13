@@ -22,7 +22,7 @@ import {
   visualCenter
 } from '@/games/repairman/game/physics';
 import { piecePolygon } from '@/games/repairman/game/shapes';
-import { buildPuzzle, findStage, PIECE_PAD, SNAP_RADIUS, tiltFor } from '@/games/repairman/game/stages';
+import { buildPuzzle, findStage, PIECE_PAD, puzzleScale, SNAP_RADIUS, tiltFor } from '@/games/repairman/game/stages';
 import { Piece } from '@/games/repairman/game/types';
 import { useRepairmanStore } from '@/store/useRepairmanStore';
 import { stageScale } from '@/stage';
@@ -42,11 +42,14 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const scale = stageScale(windowWidth, windowHeight);
   const size = useMemo(() => {
-    const width = Math.min(windowWidth - 16, 460);
-    const height = Math.max(272, Math.min(windowHeight - 200, Math.round(width * 0.72)));
+    const cap = Math.max(480, 760 * Math.min(scale, 1));
+    const availableHeight = windowHeight - (TOP_BAR_HEIGHT + 88) * scale;
+    const width = Math.round(
+      Math.max(320, Math.min(windowWidth - 48 * scale, availableHeight / 0.62, cap))
+    );
 
-    return { width, height };
-  }, [windowWidth, windowHeight]);
+    return { width, height: Math.round(width * 0.62) };
+  }, [windowWidth, windowHeight, scale]);
 
 
   const storedStage = useRepairmanStore((state) => state.stageId);
@@ -70,6 +73,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   }, [stageId, storedStage, openStage]);
 
   const puzzle = useMemo(() => buildPuzzle(stage, size), [stage, size]);
+  const snapRadius = SNAP_RADIUS * puzzleScale(size);
   const pieces = puzzle.pieces;
   const placedCount = pieces.filter((piece) => placed[piece.id]).length;
   const completed = placedCount === pieces.length;
@@ -245,7 +249,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       const aligned = piece.symmetry[orientation * 2 + (flipped[piece.id] ? 1 : 0)] ?? false;
       const blocked = Boolean(piece.requires && !placed[piece.requires]);
 
-      if (distance <= SNAP_RADIUS && aligned && !blocked) {
+      if (distance <= snapRadius && aligned && !blocked) {
         snap(piece.id);
         return;
       }
@@ -396,6 +400,12 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
               borderColor: '#F05A28'
             }}
           >
+            {/* assembly pad — the silhouette target sits on top of the workbench */}
+            <View
+              pointerEvents="none"
+              style={[styles.zone, { left: size.width * 0.5 + 6, right: 10, top: 10, bottom: 12, backgroundColor: 'rgba(228, 243, 252, 0.9)' }]}
+            />
+
             {puzzle.slots
               ? pieces.map((piece) => (
                   <Ghost key={piece.id} piece={piece} fill={piece.color} opacity={0.16} />
@@ -531,6 +541,12 @@ function Slot({ piece }: { piece: Piece }) {
 }
 
 const styles = {
+  zone: {
+    position: 'absolute' as const,
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.85)'
+  },
   resetButton: {
     height: 44,
     paddingHorizontal: 18,
