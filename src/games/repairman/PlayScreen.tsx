@@ -25,7 +25,8 @@ import { piecePolygon } from '@/games/repairman/game/shapes';
 import { buildPuzzle, findStage, PIECE_PAD, SNAP_RADIUS, tiltFor } from '@/games/repairman/game/stages';
 import { Piece } from '@/games/repairman/game/types';
 import { useRepairmanStore } from '@/store/useRepairmanStore';
-import { COLORS, FONT, SHADOW } from '@/theme';
+import { stageScale } from '@/stage';
+import { COLORS, FONT, SHADOW, TOP_BAR_HEIGHT } from '@/theme';
 
 const FIXED_STEP = 16.666;
 const FLIP_HOLD = 200;
@@ -39,12 +40,14 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   const stage = useMemo(() => findStage(stageId), [stageId]);
 
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const scale = stageScale(windowWidth, windowHeight);
   const size = useMemo(() => {
     const width = Math.min(windowWidth - 16, 460);
     const height = Math.max(272, Math.min(windowHeight - 200, Math.round(width * 0.72)));
 
     return { width, height };
   }, [windowWidth, windowHeight]);
+
 
   const storedStage = useRepairmanStore((state) => state.stageId);
   const placed = useRepairmanStore((state) => state.placed);
@@ -453,13 +456,13 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       </View>
 
       <View className="items-center pb-5">
-        <Text className="text-base text-gray-500">
+        <Text className="text-gray-500" style={{ fontSize: Math.max(12, 16 * scale) }}>
           놓은 조각 {placedCount}/{pieces.length} · 시도 {snaps + misses}
         </Text>
         {completed ? (
-          <Text className="mt-1 text-3xl font-bold text-orange-500">완성!</Text>
+          <Text className="mt-1 font-bold text-orange-500" style={{ fontSize: Math.max(20, 30 * scale) }}>완성!</Text>
         ) : (
-          <Text className="mt-1 text-base text-gray-400">
+          <Text className="mt-1 text-gray-400" style={{ fontSize: Math.max(12, 16 * scale) }}>
             {stage.rotate && stage.flip
               ? '탭=돌리기 · 200ms 누르면 뒤집기'
               : stage.rotate
