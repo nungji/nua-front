@@ -56,17 +56,9 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
   const contentHeight = mapContentHeight(STAGES.length, stepY);
   const nodes = useMemo(() => buildMapNodes(STAGES.length, mapWidth, stepY), [mapWidth, stepY]);
   const grid = useMemo(() => buildGridLines(mapWidth, contentHeight), [mapWidth, contentHeight]);
-  const previews = useMemo(() => {
-    const map: Record<number, Preview> = {};
-
-    for (const stage of STAGES) {
-      map[stage.id] = buildPreview(stage);
-    }
-
-    return map;
-  }, []);
-
   const stage = selected === null ? null : STAGES.find((item) => item.id === selected) ?? null;
+  // building a puzzle is not free, so only the stage that is actually open gets a preview
+  const preview = useMemo(() => (stage ? buildPreview(stage) : null), [stage]);
   const path = nodes.map((node) => `${node.x},${node.y}`).join(' L ');
 
   useEffect(() => {
@@ -167,7 +159,7 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
         </ScrollView>
       </View>
 
-      {stage ? (
+      {stage && preview ? (
         <Animated.View
           key={stage.id}
           entering={SlideInDown.duration(220)}
@@ -184,8 +176,8 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
                 { width: 132 * sheetScale, height: 152 * sheetScale, borderRadius: 24 * sheetScale }
               ]}
             >
-              <Svg width={116 * sheetScale} height={136 * sheetScale} viewBox={previews[stage.id].viewBox}>
-                <Path d={previews[stage.id].path} fill="#E2E8F0" stroke="#94A3B8" strokeWidth={2} />
+              <Svg width={116 * sheetScale} height={136 * sheetScale} viewBox={preview.viewBox}>
+                <Path d={preview.path} fill="#E2E8F0" stroke="#94A3B8" strokeWidth={2} />
               </Svg>
             </View>
 
