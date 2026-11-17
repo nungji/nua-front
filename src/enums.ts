@@ -5,7 +5,6 @@ export type MartWordStatus = 'locked' | 'unlocked' | 'completed';
 export type MartStageStep =
   | 'meetWord'
   | 'meaningQuiz'
-  | 'listen'
   | 'soundQuiz'
   | 'assemble'
   | 'correct'
@@ -16,7 +15,6 @@ export const MART_CORNER_ORDER: MartCornerId[] = ['grocery', 'household', 'elect
 export const MART_STAGE_STEPS: MartStageStep[] = [
   'meetWord',
   'meaningQuiz',
-  'listen',
   'soundQuiz',
   'assemble',
   'correct',

@@ -1,5 +1,4 @@
 import { Image, Text, View } from 'react-native';
-import { OceanBackground } from '../OceanBackground';
 import { OceanNextButton } from '../OceanCircleButton';
 import { OceanBigStar, OceanProgressPill } from '../OceanDecor';
 
@@ -8,16 +7,17 @@ interface StageCorrectResultProps {
   onNext: () => void;
 }
 
-// 뜻·소리 익히기 6단계 중 마지막("정답").
-const STEP_INDEX = 5;
+// 뜻·소리 익히기 5단계 중 마지막("정답").
+const STEP_INDEX = 4;
+const STEP_COUNT = 5;
 
 const NUA_MASCOT = require('../../../assets/mart/nua-mascot.png');
 
 export function StageCorrectResult({ word, onNext }: StageCorrectResultProps) {
   return (
-    <OceanBackground>
+    <>
       <View style={{ paddingHorizontal: 14, paddingTop: 10 }}>
-        <OceanProgressPill stepIndex={STEP_INDEX} />
+        <OceanProgressPill stepIndex={STEP_INDEX} stepCount={STEP_COUNT} />
       </View>
       <View className="flex-1 items-center justify-between py-6">
         <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -44,6 +44,6 @@ export function StageCorrectResult({ word, onNext }: StageCorrectResultProps) {
 
         <OceanNextButton onPress={onNext} />
       </View>
-    </OceanBackground>
+    </>
   );
 }

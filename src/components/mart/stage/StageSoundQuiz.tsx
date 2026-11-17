@@ -1,8 +1,8 @@
-import { useState } from 'react';
-import { View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 import { useMartWordSound } from '@/hooks/useMartWordSound';
-import { MartOptionRow } from '../MartOptionRow';
-import { MartRoundButton } from '../MartRoundButton';
+import { OceanSoundButton } from '../OceanCircleButton';
+import { OceanProgressPill } from '../OceanDecor';
 
 interface StageSoundQuizProps {
   word: string;
@@ -10,9 +10,17 @@ interface StageSoundQuizProps {
   onCorrect: () => void;
 }
 
+// 뜻·소리 익히기 5단계 중 세 번째("소리 퀴즈").
+const STEP_INDEX = 2;
+const STEP_COUNT = 5;
+
 export function StageSoundQuiz({ word, options, onCorrect }: StageSoundQuizProps) {
   const [selected, setSelected] = useState<string | null>(null);
   const playWordSound = useMartWordSound(word);
+
+  useEffect(() => {
+    playWordSound();
+  }, [word]);
 
   function handleSelect(option: string) {
     setSelected(option);
@@ -22,22 +30,37 @@ export function StageSoundQuiz({ word, options, onCorrect }: StageSoundQuizProps
   }
 
   return (
-    <View className="flex-1 items-center justify-between py-6">
-      <MartRoundButton
-        variant="secondary"
-        icon="sound"
-        onPress={playWordSound}
-      />
-      <View className="w-[300px] gap-3">
-        {options.map((option) => (
-          <MartOptionRow
-            key={option}
-            label={option}
-            selected={selected === option}
-            onPress={() => handleSelect(option)}
-          />
-        ))}
+    <>
+      <View style={{ paddingHorizontal: 14, paddingTop: 10 }}>
+        <OceanProgressPill stepIndex={STEP_INDEX} stepCount={STEP_COUNT} />
       </View>
-    </View>
+      <View className="flex-1 items-center justify-between py-6">
+        <OceanSoundButton onPress={playWordSound} />
+        <View className="w-[280px] gap-3">
+          {options.map((option) => {
+            const isSelected = selected === option;
+            return (
+              <Pressable
+                key={option}
+                onPress={() => handleSelect(option)}
+                style={{
+                  height: 64,
+                  borderRadius: 32,
+                  paddingHorizontal: 20,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'white',
+                  borderWidth: 3,
+                  borderColor: isSelected ? '#FF8A1F' : '#8FD0FF',
+                }}
+              >
+                <Text style={{ fontSize: 20, fontWeight: '800', color: '#1B3A6B' }}>{option}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MartTopBar } from '@/components/mart/MartTopBar';
+import { OceanBackground } from '@/components/mart/OceanBackground';
+import { OceanTopBar } from '@/components/mart/OceanTopBar';
 import { MartWordCard } from '@/components/mart/MartWordCard';
 import { getMartWordImage } from '@/data/martWordImages';
 import { MART_CORNERS } from '@/data/martWords';
@@ -11,30 +12,34 @@ export default function MartWordbook() {
   const completedWords = useMartStore((state) => state.completedWords);
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <MartTopBar title="나의 단어장" />
-      <ScrollView contentContainerClassName="p-4 gap-6">
-        {MART_CORNER_ORDER.map((cornerId) => {
-          const corner = MART_CORNERS[cornerId];
-          return (
-            <View key={cornerId}>
-              <Text className="text-base font-bold mb-3">{corner.title}</Text>
-              <View className="flex-row flex-wrap gap-4">
-                {corner.rows
-                  .flatMap((row) => row.words)
-                  .map((word) => (
-                    <MartWordCard
-                      key={word}
-                      label={word}
-                      imageSrc={getMartWordImage(word)}
-                      locked={!completedWords.has(word)}
-                    />
-                  ))}
+    <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+      <OceanBackground>
+        <OceanTopBar title="나의 단어장" />
+        <ScrollView contentContainerStyle={{ padding: 16, gap: 24 }}>
+          {MART_CORNER_ORDER.map((cornerId) => {
+            const corner = MART_CORNERS[cornerId];
+            return (
+              <View key={cornerId}>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: 'white', marginBottom: 12 }}>
+                  {corner.title}
+                </Text>
+                <View className="flex-row flex-wrap gap-4">
+                  {corner.rows
+                    .flatMap((row) => row.words)
+                    .map((word) => (
+                      <MartWordCard
+                        key={word}
+                        label={word}
+                        imageSrc={getMartWordImage(word)}
+                        locked={!completedWords.has(word)}
+                      />
+                    ))}
+                </View>
               </View>
-            </View>
-          );
-        })}
-      </ScrollView>
+            );
+          })}
+        </ScrollView>
+      </OceanBackground>
     </SafeAreaView>
   );
 }

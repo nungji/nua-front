@@ -10,10 +10,7 @@ interface OceanTopBarProps {
   onPressWordbook?: () => void;
 }
 
-/**
- * 바다 테마로 재단장한 화면(지도·코너·코너 클리어) 전용 상단바.
- * 기존 MartTopBar(기존 화면들이 계속 쓰는 중)는 건드리지 않고, 이 세 화면에서만 이걸로 대체한다.
- */
+/** 바다 테마로 재단장한 마트 화면 전체가 공통으로 쓰는 상단바. */
 export function OceanTopBar({ title, onBack, onPressWordbook }: OceanTopBarProps) {
   const { back } = useStageRouter();
 

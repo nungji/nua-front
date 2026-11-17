@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Svg, { Defs, RadialGradient, Stop, Circle } from 'react-native-svg';
 import { getMartWordImage } from '@/data/martWordImages';
-import { OceanBackground } from '../OceanBackground';
 import { OceanProgressPill } from '../OceanDecor';
 import { MartImagePlaceholder } from '../MartImagePlaceholder';
 
@@ -12,8 +11,9 @@ interface StageMeaningQuizProps {
   onCorrect: () => void;
 }
 
-// 뜻·소리 익히기 6단계 중 두 번째("뜻 퀴즈").
+// 뜻·소리 익히기 5단계 중 두 번째("뜻 퀴즈").
 const STEP_INDEX = 1;
+const STEP_COUNT = 5;
 
 export function StageMeaningQuiz({ word, options, onCorrect }: StageMeaningQuizProps) {
   const [selected, setSelected] = useState<string | null>(null);
@@ -26,9 +26,9 @@ export function StageMeaningQuiz({ word, options, onCorrect }: StageMeaningQuizP
   }
 
   return (
-    <OceanBackground>
+    <>
       <View style={{ paddingHorizontal: 14, paddingTop: 10 }}>
-        <OceanProgressPill stepIndex={STEP_INDEX} />
+        <OceanProgressPill stepIndex={STEP_INDEX} stepCount={STEP_COUNT} />
       </View>
       <View className="flex-1 items-center justify-between py-6">
         <View
@@ -80,6 +80,6 @@ export function StageMeaningQuiz({ word, options, onCorrect }: StageMeaningQuizP
           })}
         </View>
       </View>
-    </OceanBackground>
+    </>
   );
 }

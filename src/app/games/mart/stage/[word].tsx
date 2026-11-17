@@ -2,10 +2,10 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useStageRouter } from '@/hooks/useStageRouter';
-import { MartTopBar } from '@/components/mart/MartTopBar';
+import { OceanBackground } from '@/components/mart/OceanBackground';
+import { OceanTopBar } from '@/components/mart/OceanTopBar';
 import { StageAssemble } from '@/components/mart/stage/StageAssemble';
 import { StageCorrectResult } from '@/components/mart/stage/StageCorrectResult';
-import { StageListen } from '@/components/mart/stage/StageListen';
 import { StageMeaningQuiz } from '@/components/mart/stage/StageMeaningQuiz';
 import { StageMeetWord } from '@/components/mart/stage/StageMeetWord';
 import { StageReward } from '@/components/mart/stage/StageReward';
@@ -17,7 +17,6 @@ import { useMartStore } from '@/store/useMartStore';
 const STAGE_TITLES: Record<(typeof MART_STAGE_STEPS)[number], 'mart' | 'word'> = {
   meetWord: 'word',
   meaningQuiz: 'mart',
-  listen: 'word',
   soundQuiz: 'mart',
   assemble: 'mart',
   correct: 'word',
@@ -60,13 +59,13 @@ export default function MartStageScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <MartTopBar title={title} onBack={handleBack} />
-      {stageStep === 'meetWord' && <StageMeetWord word={word} onNext={advanceStep} />}
+    <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+      <OceanBackground>
+        <OceanTopBar title={title} onBack={handleBack} />
+        {stageStep === 'meetWord' && <StageMeetWord word={word} onNext={advanceStep} />}
       {stageStep === 'meaningQuiz' && (
         <StageMeaningQuiz word={word} options={meaningOptions} onCorrect={advanceStep} />
       )}
-      {stageStep === 'listen' && <StageListen word={word} onNext={advanceStep} />}
       {stageStep === 'soundQuiz' && (
         <StageSoundQuiz word={word} options={soundOptions} onCorrect={advanceStep} />
       )}
@@ -83,6 +82,7 @@ export default function MartStageScreen() {
         />
       )}
       {stageStep === 'reward' && <StageReward word={word} cornerCleared={cornerCleared} />}
+      </OceanBackground>
     </SafeAreaView>
   );
 }
