@@ -40,10 +40,9 @@ export default function MartCornerScreen() {
                 style={{
                   borderRadius: 20,
                   overflow: 'hidden',
-                  backgroundColor: '#FFF6E5',
+                  backgroundColor: unlocked ? '#FFF6E5' : '#EEF1F6',
                   borderWidth: 4,
-                  borderColor: '#B9731F',
-                  opacity: unlocked ? 1 : 0.7,
+                  borderColor: unlocked ? '#B9731F' : '#8E99AB',
                 }}
               >
                 <View
@@ -107,12 +106,12 @@ export default function MartCornerScreen() {
                           )}
                         </View>
                         {/* 선반 판 — 칸끼리 이어져 한 줄의 선반이 된다. */}
-                        <View style={{ alignSelf: 'stretch', height: 4, backgroundColor: '#F7C873' }} />
-                        <View style={{ alignSelf: 'stretch', height: 9, backgroundColor: '#E8A23D' }} />
-                        <View style={{ alignSelf: 'stretch', height: 4, backgroundColor: '#B9731F' }} />
+                        <View style={{ alignSelf: 'stretch', height: 4, backgroundColor: unlocked ? '#F7C873' : '#D5DBE5' }} />
+                        <View style={{ alignSelf: 'stretch', height: 9, backgroundColor: unlocked ? '#E8A23D' : '#B4BECD' }} />
+                        <View style={{ alignSelf: 'stretch', height: 4, backgroundColor: unlocked ? '#B9731F' : '#8E99AB' }} />
                         {/* 선반 앞에 걸린 상품표 — 스테이지를 깨기 전에는 가려져 있다. */}
                         <View style={{ height: 46, alignItems: 'center' }}>
-                          <View style={{ width: 3, height: 5, backgroundColor: '#8A5A1A' }} />
+                          <View style={{ width: 3, height: 5, backgroundColor: unlocked ? '#8A5A1A' : '#8E99AB' }} />
                           <View
                             style={{
                               minWidth: 72,
