@@ -4,7 +4,7 @@ import { useFonts } from 'expo-font';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { StageCurtains } from '@/components/StageCurtains';
+import { StageBubbles } from '@/components/StageBubbles';
 
 import '../global.css';
 
@@ -19,7 +19,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <Stack screenOptions={{ headerShown: false }} />
-        <StageCurtains />
+        <StageBubbles />
         <StatusBar style="light" />
       </SafeAreaProvider>
     </GestureHandlerRootView>

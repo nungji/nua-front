@@ -5,14 +5,13 @@ import { GameSelector } from '@/components/GameSelector';
 import { StageBackdrop } from '@/components/StageBackdrop';
 import { GAMES } from '@/games';
 import { useStageRouter } from '@/hooks/useStageRouter';
-import { peekPixels, stageScale } from '@/stage';
+import { stageScale } from '@/stage';
 import { COLORS, FONT, TEXT_SHADOW } from '@/theme';
 
 export default function SelectorScreen() {
   const { go } = useStageRouter();
   const { width, height } = useWindowDimensions();
   const scale = stageScale(width, height);
-  const peek = peekPixels('/', width);
 
   return (
     <View className="flex-1" style={{ backgroundColor: COLORS.oceanDeep }}>
@@ -24,7 +23,7 @@ export default function SelectorScreen() {
         </View>
       </SafeAreaView>
 
-      <View pointerEvents="none" style={{ position: 'absolute', left: peek + 20 * scale, top: 16 * scale }}>
+      <View pointerEvents="none" style={{ position: 'absolute', left: 20 * scale, top: 16 * scale }}>
         <Text style={[styles.wordmark, TEXT_SHADOW, { fontSize: 60 * scale }]}>바다 탐험대</Text>
         <Text style={[styles.subtitle, TEXT_SHADOW, { fontSize: 26 * scale }]}>게임 선택</Text>
       </View>
@@ -33,7 +32,7 @@ export default function SelectorScreen() {
         pointerEvents="none"
         style={{
           position: 'absolute',
-          left: peek + 8 * scale,
+          left: 8 * scale,
           bottom: 8 * scale,
           width: 190 * scale,
           height: 190 * scale
