@@ -5,6 +5,7 @@ import type { TextStyle, ViewStyle } from 'react-native';
 import designs from './design.json';
 import { CUSTOMER_COUNT, isShelf, isSuccess, ORDER_SIZE } from './game';
 import type { Action, State } from './game';
+import { BASKET, shouldPickFruit, TAP_DISTANCE } from './interaction';
 
 type Layer = {
   id: string; parent: string; name: string; type: string;
@@ -50,19 +51,28 @@ function LayerView({ node, childrenByParent }: { node: Layer; childrenByParent: 
 /** A fruit is both tappable and draggable. A cancelled drop never changes stock. */
 function Fruit({ node, index, scale, pick }: { node: Layer; index: number; scale: number; pick: () => void }) {
   const offset = useRef(new Animated.ValueXY()).current;
+  const travel = useRef(0);
   const current = useRef({ scale, pick, node });
   current.current = { scale, pick, node };
   const responder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onStartShouldSetPanResponderCapture: () => true,
-    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) + Math.abs(g.dy) > 8,
-    onPanResponderMove: (_, g) => offset.setValue({ x: g.dx / current.current.scale, y: g.dy / current.current.scale }),
+    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) + Math.abs(g.dy) > TAP_DISTANCE,
+    onPanResponderGrant: () => {
+      travel.current = 0;
+      offset.stopAnimation();
+      offset.setValue({ x: 0, y: 0 });
+    },
+    onPanResponderMove: (_, g) => {
+      travel.current = Math.max(travel.current, Math.abs(g.dx) + Math.abs(g.dy));
+      offset.setValue({ x: g.dx / current.current.scale, y: g.dy / current.current.scale });
+    },
     onPanResponderRelease: (_, g) => {
       const { node: fruit, scale: zoom, pick: add } = current.current;
       const x = fruit.x + fruit.w / 2 + g.dx / zoom;
       const y = fruit.y + fruit.h / 2 + g.dy / zoom;
-      const tapped = Math.abs(g.dx) + Math.abs(g.dy) <= 8;
-      if (tapped || (x >= 680 && x <= 852 && y >= 280 && y <= 393)) add();
+      const distance = Math.max(travel.current, Math.abs(g.dx) + Math.abs(g.dy));
+      if (shouldPickFruit(x, y, distance)) add();
       Animated.spring(offset, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
     },
     onPanResponderTerminate: () => offset.setValue({ x: 0, y: 0 }),
@@ -103,7 +113,7 @@ export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrd
       const dot = dots.indexOf(n);
       if (dot >= 0) return { ...n, color: dot < shownCompleted ? COLORS.green : dot === shownCompleted ? '#75b4f1' : '#d9d9de' };
       if (badge && n.type === 'TEXT' && Math.abs(n.x - badge.x) < 1 && Math.abs(n.y - badge.y) < 1) return { ...n, text: String(count), ...(shelf ? { x: 789, y: 305.5, w: 39, h: 39 } : {}) };
-      if (shelf && n.name === 'Basket') return { ...n, x: 690, y: 300, w: 146, h: 50 };
+      if (shelf && n.name === 'Basket') return { ...n, ...BASKET };
       if (shelf && n.name === 'Count Badge') return { ...n, x: 789, y: 305.5, w: 39, h: 39 };
       if (shelf && (n.name === 'Go To Counter Button' || n.text === '계산대로 ›')) return { ...n, x: 690, y: 350, w: 146, h: 43 };
       if (state.screen === 19 && n.name === 'Dot') return { ...n, color: comparisonDots.indexOf(n) < count ? COLORS.fruit : '#ffffff' };
@@ -121,22 +131,22 @@ export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrd
   const actions: { name: string; label: string; action: () => void }[] = [];
   if (!preview) {
     actions.push({ name: 'Back Button', label: '게임 선택으로 돌아가기', action: onExit });
-    if ([0, 1, 2].includes(state.screen)) actions.push({ name: 'Customer Group', label: '손님 주문 받기', action: () => dispatch({ type: 'advance' }) });
-    if (state.screen === 4) actions.push({ name: 'Confirm Button', label: '과일 5개 주문 확인', action: () => dispatch({ type: 'advance' }) });
+    if ([0, 1, 2].includes(state.screen)) actions.push({ name: 'Customer Group', label: '손님 주문 받기', action: () => dispatch({ type: 'advance', fromScreen: state.screen }) });
+    if (state.screen === 4) actions.push({ name: 'Confirm Button', label: '과일 5개 주문 확인', action: () => dispatch({ type: 'advance', fromScreen: state.screen }) });
     if (shelf) {
       actions.push({ name: 'Basket', label: `바구니 ${count}개, 눌러서 한 개 되돌리기`, action: () => dispatch({ type: 'remove' }) });
       actions.push({ name: 'Go To Counter Button', label: '계산대로 이동', action: () => dispatch({ type: 'counter' }) });
     }
-    if (state.screen === 12) actions.push({ name: 'Hand Over Button', label: `과일 ${count}개 건네주기`, action: () => dispatch({ type: 'advance' }) });
+    if (state.screen === 12) actions.push({ name: 'Hand Over Button', label: `과일 ${count}개 건네주기`, action: () => dispatch({ type: 'advance', fromScreen: state.screen }) });
     if ([15, 19].includes(state.screen)) actions.push({ name: 'Back To Shelf Button', label: count > ORDER_SIZE ? '과일이 많아요. 진열대에서 되돌리기' : '과일이 모자라요. 진열대에서 더 담기', action: () => dispatch({ type: 'shelf' }) });
-    if (state.screen === 23) actions.push({ name: 'Next Customer Button', label: state.completed === CUSTOMER_COUNT ? '오늘 장사 마치기' : '다음 손님 맞이하기', action: () => dispatch({ type: 'advance' }) });
-    if (state.screen === 24) actions.push({ name: 'End Of Day Button', label: '오늘 장사 결과 보기', action: () => dispatch({ type: 'advance' }) });
+    if (state.screen === 23) actions.push({ name: 'Next Customer Button', label: state.completed === CUSTOMER_COUNT ? '오늘 장사 마치기' : '다음 손님 맞이하기', action: () => dispatch({ type: 'advance', fromScreen: state.screen }) });
+    if (state.screen === 24) actions.push({ name: 'End Of Day Button', label: '오늘 장사 결과 보기', action: () => dispatch({ type: 'advance', fromScreen: state.screen }) });
     if (state.screen === 25) actions.push({ name: 'Back To Shop Button', label: '가게로 돌아가 새로 시작', action: () => dispatch({ type: 'restart' }) });
     if (find('Ticket') && !isSuccess(state.screen) && ![15, 19].includes(state.screen)) actions.push({ name: 'Ticket', label: '주문서 다시 보기', action: onOrder });
   }
   return (
     <View testID={`fruitstore-screen-${state.screen + 1}`} style={styles.board}>
-      <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
+      <View pointerEvents="none" accessible={false} aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
         {childrenByParent.get(design.id)?.map(n => <LayerView key={n.id} node={n} childrenByParent={childrenByParent} />)}
       </View>
       {!preview && shelf && SCREENS[7].nodes.filter(n => n.name === 'Fruit On Shelf').map((n, index) => !state.selected.includes(index) && <Fruit key={n.id} node={n} index={index} scale={scale} pick={() => dispatch({ type: 'pick', fruit: index })} />)}

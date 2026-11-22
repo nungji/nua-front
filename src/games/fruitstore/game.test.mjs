@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { gameReducer, initialState, STOCK_SIZE } from './game.ts';
+import { shouldPickFruit } from './interaction.ts';
 
-const advance = state => gameReducer(state, { type: 'advance' });
+const advance = state => gameReducer(state, { type: 'advance', fromScreen: state.screen });
 const start = () => Array.from({ length: 7 }).reduce(advance, { ...initialState, selected: [] });
 const pick = (state, n) => Array.from({ length: n }, (_, fruit) => fruit).reduce((s, fruit) => gameReducer(s, { type: 'pick', fruit }), state);
 const handOver = state => advance(advance(advance(gameReducer(state, { type: 'counter' }))));
@@ -66,4 +67,29 @@ test('navigation and fruit events cannot modify a completed reward', () => {
   for (const action of [{ type: 'counter' }, { type: 'shelf' }, { type: 'pick', fruit: 8 }, { type: 'remove' }]) {
     assert.equal(gameReducer(result, action), result);
   }
+});
+
+test('a stale transition cannot dismiss the order or advance the next customer', () => {
+  const modal = { ...initialState, screen: 4 };
+  assert.equal(gameReducer(modal, { type: 'advance', fromScreen: 3 }), modal);
+  const confirmed = advance(modal);
+  assert.equal(gameReducer(confirmed, { type: 'advance', fromScreen: 4 }), confirmed);
+  const success = handOver(pick(start(), 5));
+  const reward = advance(success);
+  assert.equal(gameReducer(reward, { type: 'advance', fromScreen: success.screen }), reward);
+  const next = advance(reward);
+  assert.equal(gameReducer(next, { type: 'advance', fromScreen: 23 }), next);
+});
+
+test('dragging onto the counter button, floor, or above the basket does not pick fruit', () => {
+  assert.equal(shouldPickFruit(760, 325, 700), true);
+  assert.equal(shouldPickFruit(760, 372, 700), false);
+  assert.equal(shouldPickFruit(760, 290, 700), false);
+  assert.equal(shouldPickFruit(840, 325, 700), false);
+  assert.equal(shouldPickFruit(685, 325, 700), false);
+});
+
+test('a drag that returns to its starting point is a cancellation, not a tap', () => {
+  assert.equal(shouldPickFruit(89, 134, 0), true);
+  assert.equal(shouldPickFruit(89, 134, 200), false);
 });

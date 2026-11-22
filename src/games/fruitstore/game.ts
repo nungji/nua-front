@@ -12,7 +12,7 @@ export type State = {
   correction: Correction;
 };
 export type Action =
-  | { type: 'advance' }
+  | { type: 'advance'; fromScreen: number }
   | { type: 'pick'; fruit: number }
   | { type: 'remove' }
   | { type: 'counter' }
@@ -49,7 +49,8 @@ export function gameReducer(state: State, action: Action): State {
     const correction = state.screen === 15 ? 'excess' : state.screen === 19 ? 'short' : state.correction;
     return { ...state, correction, screen: shelfScreen(state.selected.length, correction) };
   }
-  if (action.type !== 'advance') return state;
+  // Ignore callbacks from a screen that has already transitioned (double taps or queued timers).
+  if (action.type !== 'advance' || action.fromScreen !== state.screen) return state;
   if (state.screen <= 6) return { ...state, screen: state.screen + 1 };
   if (state.screen === 11 || state.screen === 12) return { ...state, screen: state.screen + 1 };
   if (state.screen === 13) {

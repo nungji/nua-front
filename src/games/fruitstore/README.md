@@ -25,4 +25,6 @@ node --experimental-strip-types --test src/games/fruitstore/game.test.mjs
 npx expo export --platform web
 ```
 
+브라우저 회귀 검증은 `scripts/fruitstore-browser-test.cjs`에 있다. Expo 웹 서버를 실행한 뒤 Playwright가 설치된 환경에서 실행한다. 기본 주소는 `http://localhost:8082`이며 `BASE_URL`로 변경할 수 있다. 별도 설치된 Chrome을 쓰려면 `CHROME_PATH`를 지정한다. 테스트는 바구니 밖 드롭·원위치 드래그 취소·주문서 포커스 격리·터치/키보드·수량 수정·하루 정산을 검증한다. `game.test.mjs`는 이전 화면에서 뒤늦게 전달된 전환 이벤트도 검사한다.
+
 모바일 가로 플레이를 위해 Expo orientation을 `default`로 열었다. 이 설정은 앱 전체에 적용되며 네이티브 빌드를 다시 만들어야 반영된다. 실제 iOS/Android 기기의 노치·회전·터치 검증은 별도로 필요하다.
