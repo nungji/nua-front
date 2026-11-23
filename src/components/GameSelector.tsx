@@ -58,7 +58,7 @@ function GameSlot({ game, position, count, slot, size, activeSize, gap, scale, o
         style={[
           styles.circle,
           SHADOW.card,
-          { backgroundColor: withAlpha(game.accent, 0.16), borderWidth: 3 * scale }
+          { backgroundColor: withAlpha('#2D8CF0', 0.16), borderWidth: 3 * scale }
         ]}
       >
         <View pointerEvents="none" style={{ position: 'absolute', inset: 5 * scale, borderRadius: 9999, borderWidth: scale, borderColor: '#FFFFFF40' }} />
