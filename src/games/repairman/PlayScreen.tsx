@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { CompletedModel } from './CompletedModel';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS, useSharedValue } from 'react-native-reanimated';
@@ -6,6 +7,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Path, Svg } from 'react-native-svg';
 
 import { GamePiece } from '@/components/GamePiece';
+import { StageBackdrop } from '@/components/StageBackdrop';
+import { TopBar } from '@/components/TopBar';
 import { PieceGraphic } from '@/components/PieceGraphic';
 import { pickPiece } from '@/games/repairman/game/hit';
 import {
@@ -20,9 +23,13 @@ import {
   visualCenter
 } from '@/games/repairman/game/physics';
 import { piecePolygon } from '@/games/repairman/game/shapes';
-import { buildPuzzle, findStage, PIECE_PAD, SNAP_RADIUS, tiltFor } from '@/games/repairman/game/stages';
+import { buildPuzzle, findStage, PIECE_PAD, puzzleScale, SNAP_RADIUS, tiltFor } from '@/games/repairman/game/stages';
 import { Piece } from '@/games/repairman/game/types';
 import { useRepairmanStore } from '@/store/useRepairmanStore';
+import { stageScale } from '@/stage';
+import { COLORS, FONT, SHADOW, TOP_BAR_HEIGHT } from '@/theme';
+
+import { ReefCorners } from './OceanDecor';
 
 const FIXED_STEP = 16.666;
 const FLIP_HOLD = 200;
@@ -32,16 +39,22 @@ type PlayScreenProps = {
   onExit: () => void;
 };
 
-export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
+export function PlayScreen(props: PlayScreenProps) {
+  const [round, setRound] = useState(0);
+  return <PlayRound key={`${props.stageId}-${round}`} {...props} onRestart={() => setRound(value => value + 1)} />;
+}
+
+function PlayRound({ stageId, onExit, onRestart }: PlayScreenProps & { onRestart: () => void }) {
   const stage = useMemo(() => findStage(stageId), [stageId]);
 
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const scale = stageScale(windowWidth, windowHeight);
   const size = useMemo(() => {
-    const width = Math.min(windowWidth - 16, 460);
-    const height = Math.max(272, Math.min(windowHeight - 200, Math.round(width * 0.72)));
-
+    const width = Math.round(Math.max(320, windowWidth - 32 * scale));
+    const height = Math.round(Math.max(220, windowHeight - (TOP_BAR_HEIGHT + 104) * scale));
     return { width, height };
-  }, [windowWidth, windowHeight]);
+  }, [windowWidth, windowHeight, scale]);
+
 
   const storedStage = useRepairmanStore((state) => state.stageId);
   const placed = useRepairmanStore((state) => state.placed);
@@ -64,6 +77,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   }, [stageId, storedStage, openStage]);
 
   const puzzle = useMemo(() => buildPuzzle(stage, size), [stage, size]);
+  const snapRadius = SNAP_RADIUS * puzzleScale(size);
   const pieces = puzzle.pieces;
   const placedCount = pieces.filter((piece) => placed[piece.id]).length;
   const completed = placedCount === pieces.length;
@@ -239,7 +253,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       const aligned = piece.symmetry[orientation * 2 + (flipped[piece.id] ? 1 : 0)] ?? false;
       const blocked = Boolean(piece.requires && !placed[piece.requires]);
 
-      if (distance <= SNAP_RADIUS && aligned && !blocked) {
+      if (distance <= snapRadius && aligned && !blocked) {
         snap(piece.id);
         return;
       }
@@ -266,7 +280,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
         return;
       }
 
-      if (stage.rotate && !isFixed(piece)) {
+      if (stage.rotate) {
         rotate(piece.id);
       }
     },
@@ -281,7 +295,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
         return;
       }
 
-      if (stage.flip && !isFixed(piece)) {
+      if (stage.flip) {
         flip(piece.id);
       }
     },
@@ -289,7 +303,8 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   );
 
   const pan = Gesture.Pan()
-    .onBegin((event) => {
+    .minDistance(8)
+    .onStart((event) => {
       const values = hits.value;
       const index = pickPiece(values, shapes, sizes, event.x, event.y);
 
@@ -354,7 +369,8 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
 
   const tap = Gesture.Tap()
     .maxDuration(190)
-    .onEnd((event) => {
+    .onEnd((event, success) => {
+      if (!success) return;
       const index = pickPiece(hits.value, shapes, sizes, event.x, event.y);
 
       if (index >= 0) {
@@ -362,33 +378,51 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       }
     });
 
-  const gesture = Gesture.Exclusive(pan, longPress, tap);
+  const gesture = stage.flip ? Gesture.Exclusive(pan, longPress, tap) : Gesture.Exclusive(pan, tap);
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-row items-center justify-between px-5 pt-2">
-        <Pressable onPress={onExit} hitSlop={16}>
-          <Text className="text-lg text-gray-500">나가기</Text>
-        </Pressable>
-        <Text className="text-xl font-semibold text-gray-900">
-          {stage.id}. {puzzle.stageName}
-        </Text>
-        <Pressable onPress={reset} hitSlop={16}>
-          <Text className="text-lg text-gray-500">다시</Text>
-        </Pressable>
-      </View>
+    <View className="flex-1" style={{ backgroundColor: COLORS.oceanDeep }}>
+      <StageBackdrop dim={0.06} />
 
-      <View className="flex-1 items-center justify-center">
+      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+        <TopBar
+          title={`${stage.id}. ${puzzle.stageName}`}
+          onBack={onExit}
+          right={
+            <Pressable onPress={() => { reset(); onRestart(); }} hitSlop={8} accessibilityRole="button" accessibilityLabel="다시" style={styles.resetButton}>
+              <Text style={styles.resetText}>다시</Text>
+            </Pressable>
+          }
+        />
+
+      <View className="flex-1 items-center justify-center" style={{ flexDirection: 'row', gap: 16 * scale, paddingHorizontal: 16 * scale }}>
         <GestureDetector gesture={gesture}>
           <View
-            className="overflow-hidden rounded-3xl bg-slate-50"
+            testID="repairman-workbench"
+            className="overflow-hidden rounded-3xl"
             style={{
               width: size.width,
               height: size.height,
               borderWidth: completed ? 4 : 0,
-              borderColor: '#F05A28'
+              borderColor: '#FFE093',
+              backgroundColor: '#DDF8FA',
+              boxShadow: '0 6px 0 #238DAA, 0 0 0 4px #FFFFFFB3'
             }}
           >
+            <ReefCorners />
+            <View testID="repairman-model" pointerEvents="none" style={{ position: 'absolute', left: 12, top: 12, width: size.width * .47, height: size.height * .6, alignItems: 'center', zIndex: 1 }}>
+              <Text style={{ fontFamily: FONT, color: '#23748F', fontSize: Math.max(13, 20 * scale) }}>이렇게 만들어요</Text>
+              <CompletedModel pieces={pieces} width={size.width * .44} height={size.height * .48} />
+            </View>
+            <View pointerEvents="none" style={{ position: 'absolute', left: 10, top: 10, width: size.width * .48 - 10, bottom: 12, borderRadius: 20, backgroundColor: '#FFF4D8' }}>
+              <Text style={{ fontFamily: FONT, color: '#A77A50', textAlign: 'center', marginTop: size.height * .64, fontSize: 18 * scale }}>조각을 골라요</Text>
+            </View>
+            {/* assembly pad — the silhouette target sits on top of the workbench */}
+            <View
+              pointerEvents="none"
+              style={[styles.zone, { left: size.width * 0.5 + 6, right: 10, top: 10, bottom: 12, backgroundColor: 'rgba(179, 231, 236, 0.65)' }]}
+            />
+
             {puzzle.slots
               ? pieces.map((piece) => (
                   <Ghost key={piece.id} piece={piece} fill={piece.color} opacity={0.16} />
@@ -402,7 +436,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
                   <Path
                     d={puzzle.silhouette}
                     fill="none"
-                    stroke="#94A3B8"
+                    stroke="#59A6B6"
                     strokeWidth={2}
                     strokeDasharray="7 6"
                   />
@@ -423,9 +457,10 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
                 left: puzzle.pedestal.x,
                 top: puzzle.pedestal.y,
                 width: puzzle.pedestal.width,
-                height: puzzle.pedestal.height
+                height: puzzle.pedestal.height,
+                backgroundColor: '#F6D39C'
               }}
-              className="rounded-md bg-slate-300"
+              className="rounded-md"
             />
 
             {pieces.map((piece, index) => (
@@ -449,13 +484,13 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       </View>
 
       <View className="items-center pb-5">
-        <Text className="text-base text-gray-500">
+        <Text style={{ color: '#175E80', fontFamily: FONT, fontSize: Math.max(12, 16 * scale) }}>
           놓은 조각 {placedCount}/{pieces.length} · 시도 {snaps + misses}
         </Text>
         {completed ? (
-          <Text className="mt-1 text-3xl font-bold text-orange-500">완성!</Text>
+          <Text className="mt-1" style={{ color: '#FFE18A', fontFamily: FONT, fontSize: Math.max(20, 30 * scale) }}>완성!</Text>
         ) : (
-          <Text className="mt-1 text-base text-gray-400">
+          <Text className="mt-1" style={{ color: '#246D87', fontFamily: FONT, fontSize: Math.max(12, 16 * scale) }}>
             {stage.rotate && stage.flip
               ? '탭=돌리기 · 200ms 누르면 뒤집기'
               : stage.rotate
@@ -466,12 +501,9 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
           </Text>
         )}
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
-}
-
-function isFixed(piece: Piece) {
-  return piece.symmetry.every(Boolean);
 }
 
 function Hint({ piece }: { piece: Piece }) {
@@ -517,7 +549,32 @@ function Slot({ piece }: { piece: Piece }) {
         top: piece.slot.y - PIECE_PAD
       }}
     >
-      <PieceGraphic piece={piece} edges={piece.edges} fill="none" stroke="#94A3B8" strokeWidth={2} />
+      <PieceGraphic piece={piece} edges={piece.edges} fill="none" stroke="#59A6B6" strokeWidth={2} />
     </View>
   );
 }
+
+const styles = {
+  zone: {
+    position: 'absolute' as const,
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.85)'
+  },
+  resetButton: {
+    height: 44,
+    paddingHorizontal: 18,
+    borderRadius: 22,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: COLORS.white,
+    borderWidth: 4,
+    borderColor: '#7FE6E4',
+    ...SHADOW.button
+  },
+  resetText: {
+    fontFamily: FONT,
+    fontSize: 18,
+    color: '#168AA7'
+  }
+};

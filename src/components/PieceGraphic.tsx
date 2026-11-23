@@ -1,8 +1,11 @@
-import { Path, Svg } from 'react-native-svg';
+import { OceanPieceDetail } from '@/games/repairman/OceanPieceDetail';
+import { useId } from 'react';
+import { Circle, ClipPath, Defs, Ellipse, G, LinearGradient, Path, Stop, Svg } from 'react-native-svg';
 
 import { piecePath } from '@/games/repairman/game/shapes';
 import { PIECE_PAD } from '@/games/repairman/game/stages';
 import { Piece, PieceEdges } from '@/games/repairman/game/types';
+import { COLORS, shade } from '@/theme';
 
 type PieceGraphicProps = {
   piece: Piece;
@@ -11,7 +14,11 @@ type PieceGraphicProps = {
   stroke?: string;
   strokeWidth?: number;
   opacity?: number;
+  /** Silhouette-only rendering for slots and ghosts. */
+  plain?: boolean;
 };
+
+const OUTLINE = 5;
 
 export function PieceGraphic({
   piece,
@@ -19,10 +26,15 @@ export function PieceGraphic({
   fill,
   stroke,
   strokeWidth,
-  opacity
+  opacity,
+  plain = fill === 'none'
 }: PieceGraphicProps) {
+  const instanceId = useId();
   const width = piece.width + PIECE_PAD * 2;
   const height = piece.height + PIECE_PAD * 2;
+  const path = piecePath(piece, edges);
+  const gradientId = `piece-grad-${instanceId}`;
+  const clipId = `piece-clip-${instanceId}`;
 
   return (
     <Svg
@@ -31,7 +43,55 @@ export function PieceGraphic({
       viewBox={`${-PIECE_PAD} ${-PIECE_PAD} ${width} ${height}`}
       style={{ opacity }}
     >
-      <Path d={piecePath(piece, edges)} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
+      {plain ? (
+        <Path d={path} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
+      ) : (
+        <>
+          <Defs>
+            <LinearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={shade(fill, 0.22)} />
+              <Stop offset="1" stopColor={shade(fill, -0.16)} />
+            </LinearGradient>
+            <ClipPath id={clipId}>
+              <Path d={path} />
+            </ClipPath>
+          </Defs>
+
+          <Path
+            d={path}
+            fill={`url(#${gradientId})`}
+            stroke={COLORS.white}
+            strokeWidth={OUTLINE}
+            strokeLinejoin="round"
+          />
+
+          {/* gloss band, clipped so it never spills past the outline */}
+          <G clipPath={`url(#${clipId})`}>
+            <OceanPieceDetail piece={piece} />
+            {piece.id.startsWith('ocean') && piece.id.endsWith('_shell') && piece.shape === 'semicircle' ?
+              <G stroke="rgba(167, 43, 91, 0.3)" strokeWidth={3}>
+                {[0.15, 0.35, 0.65, 0.85].map(x => <Path key={x} d={`M${piece.width * x} 2 L${piece.width * 0.5} ${piece.height * 0.94}`} />)}
+              </G> : null}
+            {piece.id.startsWith('ocean') && /_eye\d*$/.test(piece.id) ?
+              <Circle cx={piece.width * 0.5} cy={piece.height * 0.5} r={piece.width * 0.24} fill="#174563" /> : null}
+
+            <Ellipse
+              cx={piece.width * 0.34}
+              cy={piece.height * 0.2}
+              rx={piece.width * 0.3}
+              ry={piece.height * 0.16}
+              fill="rgba(255, 255, 255, 0.45)"
+            />
+            <Ellipse
+              cx={piece.width * 0.72}
+              cy={piece.height * 0.78}
+              rx={piece.width * 0.26}
+              ry={piece.height * 0.14}
+              fill="rgba(10, 44, 107, 0.10)"
+            />
+          </G>
+        </>
+      )}
     </Svg>
   );
 }

@@ -1,10 +1,12 @@
+import { OCEAN_STAGES } from './oceanStages';
+import { shade } from '@/theme';
+
 import { buildSilhouettePath } from './silhouette';
-import { SHAPES, ShapeId } from './shapeset';
+import { SHAPES } from './shapeset';
 import { piecePolygon, shiftedPolygon } from './shapes';
 import {
   BoardSize,
   Chamfers,
-  PartSpec,
   Pedestal,
   Piece,
   PieceEdges,
@@ -17,7 +19,7 @@ export const SNAP_RADIUS = 56;
 export const PEDESTAL_HEIGHT = 26;
 
 const TONES = ['#C9C2B6', '#9FB4D6', '#E3A9A0', '#A3C2B0', '#B5AECD', '#D8C89A', '#AEB7C4', '#CBB6C9', '#A9C6C6'];
-const COLORS = ['#F05A28', '#2F6FED', '#E5553F', '#3D3D4E', '#6B4FA8', '#E0A400', '#2B7A5E', '#B03A6B', '#1F7A8C'];
+const OBJECT_COLORS = ['#EE6474', '#01A7FC', '#FFC93C', '#995DBE', '#44D5EE', '#FFA24C', '#97E1D1', '#016BEA', '#F9E4A5'];
 const INITIAL_TURNS = [3, 2, 1, 2, 3, 1, 2, 3, 1];
 const INITIAL_FLIPS = [true, false, false, true, false, false, true, false, true];
 
@@ -25,201 +27,35 @@ const FLOOR_MARGIN = 10;
 const FLOOR_GAP = 7;
 const TOP_MARGIN = 8;
 
-function part(id: string, shape: ShapeId, x: number, y: number): PartSpec {
-  return { id, shape, slot: { x, y } };
+/** Every part of one object shares a hue so the finished piece reads as a single toy. */
+function partColor(stageId: number, index: number): string {
+  const base = OBJECT_COLORS[(stageId - 1) % OBJECT_COLORS.length];
+  const shift = [0, -0.12, 0.1, -0.06][index % 4];
+
+  return shade(base, shift);
 }
 
-const BOOK: PartSpec[] = [
-  part('cover', 'bookCover', 0, 60),
-  part('spine', 'bookSpine', 0, 70),
-  part('pages', 'bookPages', 10, 70)
-];
-
-const CUP: PartSpec[] = [
-  part('lid', 'cupLid', 16, 66),
-  part('cup', 'cupBody', 16, 76),
-  part('handle', 'cupHandle', 80, 94),
-  part('saucer', 'cupSaucer', 0, 138)
-];
-
-const CHAIR: PartSpec[] = [
-  part('rail', 'chairRail', 8, 60),
-  part('back', 'chairBack', 8, 70),
-  part('seat', 'chairSeat', 8, 120),
-  part('legLeft', 'chairLegLeft', 14, 134),
-  part('legRight', 'chairLegRight', 72, 134)
-];
-
-const DOOR: PartSpec[] = [
-  part('lintel', 'doorLintel', 0, 50),
-  part('trimLeft', 'doorTrimLeft', 0, 62),
-  part('panel', 'doorPanel', 10, 62),
-  part('trimRight', 'doorTrimRight', 80, 62),
-  part('sill', 'doorSill', 0, 152)
-];
-
-const PENCIL: PartSpec[] = [
-  part('tip', 'pencilTip', 0, 60),
-  part('body', 'pencilBody', 22, 60),
-  part('eraser', 'pencilEraser', 130, 61)
-];
-
-const CAR: PartSpec[] = [
-  part('cabin', 'carCabin', 50, 76),
-  part('chassis', 'carChassis', 15, 120),
-  part('bumper', 'carBumper', 1, 140),
-  part('wheelFront', 'carWheelFront', 30, 166),
-  part('wheelRear', 'carWheelRear', 110, 166)
-];
-
-const PLANE: PartSpec[] = [
-  part('tail', 'planeTail', 14, 72),
-  part('windshield', 'planeWindshield', 46, 92),
-  part('fuselage', 'planeFuselage', 8, 110),
-  part('wing', 'planeWing', 40, 144),
-  part('wheelMain', 'planeWheelMain', 52, 166),
-  part('wheelNose', 'planeWheelNose', 118, 169)
-];
-
-const TRAIN: PartSpec[] = [
-  part('chimney', 'trainChimney', 38, 60),
-  part('cab', 'trainCab', 120, 40),
-  part('body', 'trainBody', 16, 100),
-  part('wheelLeft', 'trainWheelLeft', 38, 142),
-  part('wheelRight', 'trainWheelRight', 116, 144)
-];
-
-const DESK: PartSpec[] = [
-  part('top', 'deskTop', 5, 110),
-  part('legLeft', 'deskLegLeft', 5, 122),
-  part('drawer', 'deskDrawer', 40, 122),
-  part('divider', 'deskDivider', 122, 122),
-  part('legRight', 'deskLegRight', 146, 122),
-  part('shelf', 'deskShelf', 84, 150)
-];
-
-const ROBOT: PartSpec[] = [
-  part('antenna', 'robotAntenna', 56, 44),
-  part('head', 'robotHead', 40, 60),
-  part('armLeft', 'robotArmLeft', 14, 104),
-  part('armRight', 'robotArmRight', 94, 104),
-  part('torso', 'robotTorso', 28, 100),
-  part('legLeft', 'robotLegLeft', 34, 166),
-  part('legRight', 'robotLegRight', 68, 166)
-];
-
-const CLOCK: PartSpec[] = [
-  part('knob', 'clockKnob', 64, 38),
-  part('face', 'clockFace', 25, 44),
-  part('pendulum', 'clockPendulum', 68, 138),
-  part('base', 'clockBase', 35, 172)
-];
-
-const TRUCK: PartSpec[] = [
-  part('container', 'truckContainer', 0, 74),
-  part('cab', 'truckCab', 108, 80),
-  part('chassis', 'truckChassis', 0, 136),
-  part('wheelFront', 'truckWheelFront', 22, 120),
-  part('wheelMiddle', 'truckWheelMiddle', 78, 122),
-  part('wheelRear', 'truckWheelRear', 120, 124)
-];
-
-const HOUSE: PartSpec[] = [
-  part('chimney', 'houseChimney', 84, 54),
-  part('roof', 'houseRoof', 10, 70),
-  part('wall', 'houseWall', 20, 112),
-  part('fenceLeft', 'houseFenceLeft', 0, 186),
-  part('door', 'houseDoor', 40, 186),
-  part('window', 'houseWindow', 88, 186),
-  part('fenceRight', 'houseFenceRight', 120, 186)
-];
-
-const FAN: PartSpec[] = [
-  part('head', 'fanHead', 43, 54),
-  part('pole', 'fanPole', 69, 118),
-  part('button', 'fanButton', 50, 170),
-  part('base', 'fanBase', 37, 178)
-];
-
-const BED: PartSpec[] = [
-  part('headboard', 'bedHeadboard', 0, 96),
-  part('blanket', 'bedBlanket', 72, 114),
-  part('pillow', 'bedPillow', 26, 118),
-  part('mattress', 'bedMattress', 22, 134),
-  part('legLeft', 'bedLegLeft', 30, 162),
-  part('legRight', 'bedLegRight', 128, 162)
-];
-
-const ROCKET: PartSpec[] = [
-  part('antenna', 'rocketAntenna', 70, 26),
-  part('nose', 'rocketNose', 48, 44),
-  part('body', 'rocketBody', 48, 78),
-  part('window', 'rocketWindow', 63, 92),
-  part('boosterLeft', 'rocketBoosterLeft', 30, 126),
-  part('boosterRight', 'rocketBoosterRight', 100, 126),
-  part('finLeft', 'rocketFinLeft', 32, 140),
-  part('finRight', 'rocketFinRight', 102, 140)
-];
-
-const SOFA: PartSpec[] = [
-  part('armLeft', 'sofaArmLeft', 0, 104),
-  part('back', 'sofaBack', 13, 110),
-  part('armRight', 'sofaArmRight', 133, 104),
-  part('seat', 'sofaSeat', 13, 164)
-];
-
-const PIANO: PartSpec[] = [
-  part('lid', 'pianoLid', 0, 100),
-  part('body', 'pianoBody', 5, 110),
-  part('keys', 'pianoKeys', 15, 160),
-  part('legLeft', 'pianoLegLeft', 10, 174),
-  part('legRight', 'pianoLegRight', 128, 174),
-  part('pedal', 'pianoPedal', 60, 186)
-];
-
-const CRANE: PartSpec[] = [
-  part('counter', 'craneCounter', 0, 74),
-  part('arm', 'craneArm', 20, 76),
-  part('cable', 'craneCable', 120, 90),
-  part('mast', 'craneMast', 20, 90),
-  part('hook', 'craneHook', 115, 130),
-  part('load', 'craneLoad', 106, 142),
-  part('base', 'craneBase', 0, 200)
-];
-
-const CASTLE: PartSpec[] = [
-  part('pole', 'castlePole', 76, 70),
-  part('flag', 'castleFlag', 82, 70),
-  part('keep', 'castleKeep', 60, 100),
-  part('roofLeft', 'castleRoofLeft', 0, 104),
-  part('roofRight', 'castleRoofRight', 130, 106),
-  part('towerLeft', 'castleTowerLeft', 0, 120),
-  part('towerRight', 'castleTowerRight', 130, 120),
-  part('wall', 'castleWall', 30, 140),
-  part('gate', 'castleGate', 66, 166)
-];
-
 export const STAGES: StageConfig[] = [
-  { id: 1, name: '책', parts: BOOK, slots: true, connectors: true, rotate: false, flip: false, dependency: false },
-  { id: 2, name: '컵', parts: CUP, slots: true, connectors: true, rotate: false, flip: false, dependency: false },
-  { id: 3, name: '의자', parts: CHAIR, slots: true, connectors: true, rotate: false, flip: false, dependency: false },
-  { id: 4, name: '문', parts: DOOR, slots: true, connectors: true, rotate: false, flip: false, dependency: false },
-  { id: 5, name: '연필', parts: PENCIL, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
-  { id: 6, name: '자동차', parts: CAR, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
-  { id: 7, name: '비행기', parts: PLANE, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
-  { id: 8, name: '기차', parts: TRAIN, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
-  { id: 9, name: '책상', parts: DESK, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
-  { id: 10, name: '로봇', parts: ROBOT, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
-  { id: 11, name: '시계', parts: CLOCK, slots: false, connectors: false, rotate: true, flip: false, dependency: false },
-  { id: 12, name: '트럭', parts: TRUCK, slots: false, connectors: false, rotate: true, flip: false, dependency: false },
-  { id: 13, name: '집', parts: HOUSE, slots: false, connectors: false, rotate: true, flip: false, dependency: false },
-  { id: 14, name: '선풍기', parts: FAN, slots: false, connectors: false, rotate: false, flip: true, dependency: false },
-  { id: 15, name: '침대', parts: BED, slots: false, connectors: false, rotate: false, flip: true, dependency: false },
-  { id: 16, name: '우주선', parts: ROCKET, slots: false, connectors: false, rotate: false, flip: true, dependency: false },
-  { id: 17, name: '소파', parts: SOFA, slots: false, connectors: false, rotate: true, flip: true, dependency: false },
-  { id: 18, name: '피아노', parts: PIANO, slots: false, connectors: false, rotate: true, flip: true, dependency: false },
-  { id: 19, name: '크레인', parts: CRANE, slots: false, connectors: false, rotate: true, flip: true, dependency: false },
-  { id: 20, name: '성', parts: CASTLE, slots: false, connectors: false, rotate: true, flip: true, dependency: true }
+  { id: 1, name: OCEAN_STAGES[0].name, parts: OCEAN_STAGES[0].parts, slots: true, connectors: true, rotate: false, flip: false, dependency: false },
+  { id: 2, name: OCEAN_STAGES[1].name, parts: OCEAN_STAGES[1].parts, slots: true, connectors: true, rotate: false, flip: false, dependency: false },
+  { id: 3, name: OCEAN_STAGES[2].name, parts: OCEAN_STAGES[2].parts, slots: true, connectors: true, rotate: false, flip: false, dependency: false },
+  { id: 4, name: OCEAN_STAGES[3].name, parts: OCEAN_STAGES[3].parts, slots: true, connectors: true, rotate: false, flip: false, dependency: false },
+  { id: 5, name: OCEAN_STAGES[4].name, parts: OCEAN_STAGES[4].parts, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
+  { id: 6, name: OCEAN_STAGES[5].name, parts: OCEAN_STAGES[5].parts, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
+  { id: 7, name: OCEAN_STAGES[6].name, parts: OCEAN_STAGES[6].parts, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
+  { id: 8, name: OCEAN_STAGES[7].name, parts: OCEAN_STAGES[7].parts, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
+  { id: 9, name: OCEAN_STAGES[8].name, parts: OCEAN_STAGES[8].parts, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
+  { id: 10, name: OCEAN_STAGES[9].name, parts: OCEAN_STAGES[9].parts, slots: false, connectors: false, rotate: false, flip: false, dependency: false },
+  { id: 11, name: OCEAN_STAGES[10].name, parts: OCEAN_STAGES[10].parts, slots: false, connectors: false, rotate: true, flip: false, dependency: false },
+  { id: 12, name: OCEAN_STAGES[11].name, parts: OCEAN_STAGES[11].parts, slots: false, connectors: false, rotate: true, flip: false, dependency: false },
+  { id: 13, name: OCEAN_STAGES[12].name, parts: OCEAN_STAGES[12].parts, slots: false, connectors: false, rotate: true, flip: false, dependency: false },
+  { id: 14, name: OCEAN_STAGES[13].name, parts: OCEAN_STAGES[13].parts, slots: false, connectors: false, rotate: false, flip: true, dependency: false },
+  { id: 15, name: OCEAN_STAGES[14].name, parts: OCEAN_STAGES[14].parts, slots: false, connectors: false, rotate: false, flip: true, dependency: false },
+  { id: 16, name: OCEAN_STAGES[15].name, parts: OCEAN_STAGES[15].parts, slots: false, connectors: false, rotate: false, flip: true, dependency: false },
+  { id: 17, name: OCEAN_STAGES[16].name, parts: OCEAN_STAGES[16].parts, slots: false, connectors: false, rotate: true, flip: true, dependency: false },
+  { id: 18, name: OCEAN_STAGES[17].name, parts: OCEAN_STAGES[17].parts, slots: false, connectors: false, rotate: true, flip: true, dependency: false },
+  { id: 19, name: OCEAN_STAGES[18].name, parts: OCEAN_STAGES[18].parts, slots: false, connectors: false, rotate: true, flip: true, dependency: false },
+  { id: 20, name: OCEAN_STAGES[19].name, parts: OCEAN_STAGES[19].parts, slots: false, connectors: false, rotate: true, flip: true, dependency: true }
 ];
 
 export function tiltFor(index: number) {
@@ -453,14 +289,20 @@ export function stageHint(stage: StageConfig) {
   return features.join(' · ');
 }
 
+/** Shape specs are authored against a 460px wide board and scaled from there. */
+export function puzzleScale(size: BoardSize): number {
+  return Math.max(0.85, Math.min(1.7, size.width / 460, size.height / 300));
+}
+
 export function buildPuzzle(stage: StageConfig, size: BoardSize): Puzzle {
+  const k = puzzleScale(size);
   const parts = stage.parts;
-  const pedestalTop = size.height - PEDESTAL_HEIGHT;
+  const pedestalTop = size.height - PEDESTAL_HEIGHT * k;
   const targetX = Math.round(size.width * 0.5);
   const targetWidth = size.width - targetX - 8;
-  const minX = Math.min(...parts.map((item) => item.slot.x));
-  const maxX = Math.max(...parts.map((item) => item.slot.x + SHAPES[item.shape].width));
-  const maxY = Math.max(...parts.map((item) => item.slot.y + SHAPES[item.shape].height));
+  const minX = Math.min(...parts.map((item) => item.slot.x * k));
+  const maxX = Math.max(...parts.map((item) => (item.slot.x + SHAPES[item.shape].width) * k));
+  const maxY = Math.max(...parts.map((item) => (item.slot.y + SHAPES[item.shape].height) * k));
   const shiftX = targetX + (targetWidth - (maxX - minX)) / 2 - minX;
   const shiftY = pedestalTop - maxY;
 
@@ -469,14 +311,14 @@ export function buildPuzzle(stage: StageConfig, size: BoardSize): Puzzle {
     return {
       id: item.id,
       shape: shape.kind,
-      width: shape.width,
-      height: shape.height,
+      width: shape.width * k,
+      height: shape.height * k,
       tone: TONES[index % TONES.length],
-      color: COLORS[index % COLORS.length],
+      color: item.color ?? partColor(stage.id, index),
       start: { x: 0, y: 0 },
-      slot: { x: item.slot.x + shiftX, y: item.slot.y + shiftY },
+      slot: { x: item.slot.x * k + shiftX, y: item.slot.y * k + shiftY },
       edges: emptyEdges(),
-      chamfers: shape.chamfers ?? [0, 0, 0, 0],
+      chamfers: (shape.chamfers ?? [0, 0, 0, 0]).map((value) => value * k) as Chamfers,
       requires: undefined,
       overlaps: false,
       needsHint: false,
@@ -504,10 +346,10 @@ export function buildPuzzle(stage: StageConfig, size: BoardSize): Puzzle {
   layoutScatter(pieces, size, targetX);
 
   const pedestal: Pedestal = {
-    x: targetX + 4,
+    x: 8,
     y: pedestalTop,
-    width: Math.max(60, size.width - targetX - 16),
-    height: PEDESTAL_HEIGHT
+    width: Math.max(60, size.width - 16),
+    height: PEDESTAL_HEIGHT * k
   };
 
   return {

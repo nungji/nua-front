@@ -1,7 +1,8 @@
+import { OCEAN_SHAPES } from './oceanShapes';
 import { Chamfers } from './types';
 
 export type ShapeSpec = {
-  kind: 'rect' | 'circle' | 'semicircle';
+  kind: 'rect' | 'circle' | 'semicircle' | 'dome';
   width: number;
   height: number;
   chamfers?: Chamfers;
@@ -27,6 +28,7 @@ const s = (diameter: number): ShapeSpec => ({
 });
 
 export const SHAPES = {
+  ...OCEAN_SHAPES,
   bookCover: r(108, 10, [4, 4, 0, 0]),
   bookPages: r(88, 46, [0, 0, 4, 0]),
   bookSpine: r(10, 46, [4, 0, 0, 0]),
@@ -172,7 +174,7 @@ export function symmetryOf(shape: ShapeSpec): Symmetry {
     return { rotation: 4, mirror: true };
   }
 
-  if (shape.kind === 'semicircle') {
+  if (shape.kind === 'semicircle' || shape.kind === 'dome') {
     return { rotation: 1, mirror: true };
   }
 

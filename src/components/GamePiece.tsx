@@ -118,6 +118,7 @@ export function GamePiece({
 
   return (
     <Animated.View
+      testID={`repair-piece-${piece.id}`}
       style={[
         {
           position: 'absolute',
@@ -129,13 +130,7 @@ export function GamePiece({
         animatedStyle
       ]}
     >
-      <PieceGraphic
-        piece={piece}
-        edges={piece.edges}
-        fill={placed ? piece.color : piece.tone}
-        stroke="#FFFFFF"
-        strokeWidth={1.5}
-      />
+      <PieceGraphic piece={piece} edges={piece.edges} fill={piece.color} />
     </Animated.View>
   );
 }

@@ -1,20 +1,32 @@
-import { View } from 'react-native';
+import { Image, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GameSelector } from '@/components/GameSelector';
 import { StageBackdrop } from '@/components/StageBackdrop';
 import { GAMES } from '@/games';
 import { useStageRouter } from '@/hooks/useStageRouter';
+import { stageScale } from '@/stage';
+import { COLORS } from '@/theme';
 
 export default function SelectorScreen() {
   const { go } = useStageRouter();
+  const { width, height } = useWindowDimensions();
+  const scale = stageScale(width, height);
 
   return (
-    <View className="flex-1 bg-[#0B1026]">
+    <View className="flex-1" style={{ backgroundColor: COLORS.oceanDeep }}>
       <StageBackdrop />
-      <SafeAreaView className="flex-1 items-center justify-center">
-        <GameSelector games={GAMES} onSelect={(game) => go(game.route)} />
+
+      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+        <View className="flex-1 justify-center">
+          <GameSelector games={GAMES} onSelect={(game) => go(game.route)} />
+        </View>
       </SafeAreaView>
+
+      <View pointerEvents="none" style={{ position: 'absolute', left: 20 * scale, top: 16 * scale }}>
+        <Image source={require('../assets/shellstore/logo.png')} accessibilityLabel="nua" resizeMode="contain" style={{ width: 270 * scale, height: 115 * scale }} />
+      </View>
+
     </View>
   );
 }

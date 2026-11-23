@@ -9,6 +9,10 @@ import {
 import { Piece, PieceEdges, Point } from './types';
 
 export function piecePath(piece: Piece, edges: PieceEdges) {
+  if (piece.shape === 'dome') {
+    return `M0,${piece.height} A${piece.width / 2},${piece.height} 0 0 1 ${piece.width},${piece.height} Z`;
+  }
+
   if (piece.shape === 'circle') {
     return circlePath(piece.width, piece.height);
   }
@@ -21,6 +25,12 @@ export function piecePath(piece: Piece, edges: PieceEdges) {
 }
 
 export function piecePolygon(piece: Piece) {
+  if (piece.shape === 'dome') {
+    return semicirclePolygon(piece.width, piece.edges)
+      .map(point => ({ x: point.x, y: piece.height - point.y }))
+      .reverse();
+  }
+
   if (piece.shape === 'circle') {
     return circlePolygon(piece.width, piece.height);
   }

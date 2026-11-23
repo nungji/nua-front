@@ -4,9 +4,15 @@ import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Path, Svg } from 'react-native-svg';
 
+import { StageBackdrop } from '@/components/StageBackdrop';
+import { TopBar } from '@/components/TopBar';
 import { buildPuzzle, STAGES, stageHint } from '@/games/repairman/game/stages';
+import { DESIGN_FRAME, stageScale } from '@/stage';
+import { COLORS, FONT, SHADOW, withAlpha } from '@/theme';
 import { StageConfig } from '@/games/repairman/game/types';
-import { buildGridLines, buildMapNodes, mapContentHeight } from '@/games/repairman/game/worldmap';
+import { buildGridLines, buildMapNodes, mapContentHeight, MAP } from '@/games/repairman/game/worldmap';
+
+import { PearlMarker } from './OceanDecor';
 
 const PREVIEW_BOARD = { width: 400, height: 288 };
 const STONE_SIZE = 66;
@@ -37,24 +43,24 @@ function buildPreview(stage: StageConfig): Preview {
 }
 
 export function StageMap({ accent, onStart, onExit }: StageMapProps) {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const scale = stageScale(width, height);
+  const panelWidth = width - 32;
+  const mapWidth = Math.min(panelWidth, DESIGN_FRAME.width);
+  const mapOffset = (panelWidth - mapWidth) / 2;
+  const stoneFactor = Math.min(scale, 1.4);
+  const stone = Math.round(STONE_SIZE * stoneFactor);
+  const stepY = MAP.stepY * stoneFactor;
+  const sheetScale = Math.min(scale, 1.3);
   const scrollRef = useRef<ScrollView>(null);
   const [selected, setSelected] = useState<number | null>(null);
 
-  const contentHeight = mapContentHeight(STAGES.length);
-  const nodes = useMemo(() => buildMapNodes(STAGES.length, width), [width]);
-  const grid = useMemo(() => buildGridLines(width, contentHeight), [width, contentHeight]);
-  const previews = useMemo(() => {
-    const map: Record<number, Preview> = {};
-
-    for (const stage of STAGES) {
-      map[stage.id] = buildPreview(stage);
-    }
-
-    return map;
-  }, []);
-
+  const contentHeight = mapContentHeight(STAGES.length, stepY);
+  const nodes = useMemo(() => buildMapNodes(STAGES.length, mapWidth, stepY), [mapWidth, stepY]);
+  const grid = useMemo(() => buildGridLines(mapWidth, contentHeight), [mapWidth, contentHeight]);
   const stage = selected === null ? null : STAGES.find((item) => item.id === selected) ?? null;
+  // building a puzzle is not free, so only the stage that is actually open gets a preview
+  const preview = useMemo(() => (stage ? buildPreview(stage) : null), [stage]);
   const path = nodes.map((node) => `${node.x},${node.y}`).join(' L ');
 
   useEffect(() => {
@@ -62,40 +68,37 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
   }, [contentHeight]);
 
   return (
-    <SafeAreaView className="flex-1 bg-[#EAF2FB]" edges={['top']}>
-      <View className="flex-row items-center justify-between px-6 pb-2 pt-3">
-        <Pressable onPress={onExit} hitSlop={16}>
-          <Text className="text-base text-slate-400">나가기</Text>
-        </Pressable>
-        <Text className="text-3xl font-bold text-slate-900">수리공</Text>
-        <View style={{ width: 44 }} />
-      </View>
-      <Text className="px-6 pb-3 text-base text-slate-500">고칠 물건을 골라 주세요</Text>
+    <View className="flex-1" style={{ backgroundColor: COLORS.oceanDeep }}>
+      <StageBackdrop dim={0.06} />
 
-      <ScrollView
-        ref={scrollRef}
-        className="flex-1"
-        contentContainerStyle={{ height: contentHeight }}
-        showsVerticalScrollIndicator={false}
-      >
+      <SafeAreaView className="flex-1" edges={['top']}>
+        <TopBar title="수리공" onBack={onExit} />
+
+      <View style={styles.mapPanel}>
+        <ScrollView
+          ref={scrollRef}
+          className="flex-1"
+          contentContainerStyle={{ height: contentHeight }}
+          showsVerticalScrollIndicator={false}
+        >
         {/* 배경 아트 자리 — 나중에 이 자리에 벡터 배경 이미지를 깔고, 격자/경로/스톤을 그 위 레이어로 둡니다. */}
-        <Svg width={width} height={contentHeight} style={{ position: 'absolute' }}>
+        <Svg width={mapWidth} height={contentHeight} style={{ position: 'absolute', left: mapOffset }}>
           {grid.map((line, index) => (
             <Path
               key={`grid-${index}`}
               d={`M${line.from.x},${line.from.y} L${line.to.x},${line.to.y}`}
-              stroke="#CBD8E8"
+              stroke={withAlpha(COLORS.oceanMid, 0)}
               strokeWidth={1}
             />
           ))}
         </Svg>
 
-        <Svg width={width} height={contentHeight} style={{ position: 'absolute' }}>
+        <Svg width={mapWidth} height={contentHeight} style={{ position: 'absolute', left: mapOffset }}>
           <Path
             d={`M ${path}`}
-            stroke="#E8A87C"
-            strokeWidth={7}
-            strokeDasharray="2 13"
+            stroke="#C7FAFF"
+            strokeWidth={9}
+            strokeDasharray="1 18"
             strokeLinecap="round"
             fill="none"
           />
@@ -104,7 +107,7 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
         {nodes.map((node) => {
           const stageItem = STAGES[node.id - 1];
           const active = node.id === selected;
-          const size = STONE_SIZE * node.scale;
+          const size = stone * node.scale;
 
           return (
             <Pressable
@@ -112,7 +115,7 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
               onPress={() => setSelected(node.id)}
               style={{
                 position: 'absolute',
-                left: node.x - size / 2,
+                left: node.x + mapOffset - size / 2,
                 top: node.y - size / 2,
                 width: size,
                 height: size,
@@ -127,7 +130,7 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
                   width: size * 0.86,
                   height: size * 0.3,
                   borderRadius: size,
-                  backgroundColor: '#C3CEDA'
+                  backgroundColor: withAlpha(COLORS.shadow, 0.18)
                 }}
               />
               <View
@@ -135,23 +138,20 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
                   width: size,
                   height: size,
                   borderRadius: size,
-                  backgroundColor: active ? accent : '#FFFFFF',
-                  borderWidth: active ? 3 : 2,
-                  borderColor: active ? '#FFFFFF' : '#F0A36B',
+                  backgroundColor: 'transparent',
+                  borderWidth: 0,
+                  borderColor: active ? COLORS.white : COLORS.sand,
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}
               >
-                <Text
-                  className={active ? 'font-bold text-white' : 'font-bold text-slate-700'}
-                  style={{ fontSize: size * 0.38 }}
-                >
+                <PearlMarker size={size} active={active} />
+                <Text style={{ fontFamily: FONT, fontSize: size * 0.35, color: '#176D95' }}>
                   {node.id}
                 </Text>
               </View>
               <Text
-                className="absolute text-[11px] font-medium text-slate-500"
-                style={{ top: size + 2 }}
+                style={{ position: 'absolute', top: size + 2, fontFamily: FONT, fontSize: 12 * stoneFactor, color: '#FFFFFF' }}
                 numberOfLines={1}
               >
                 {stageItem.name}
@@ -159,58 +159,123 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
             </Pressable>
           );
         })}
-      </ScrollView>
+        </ScrollView>
+      </View>
 
-      {stage ? (
+      {stage && preview ? (
         <Animated.View
           key={stage.id}
           entering={SlideInDown.duration(220)}
           exiting={SlideOutDown.duration(160)}
-          className="absolute bottom-0 left-0 right-0 rounded-t-3xl border-t border-slate-200 bg-white px-6 pb-10 pt-5"
+          style={[
+            styles.sheet,
+            { paddingHorizontal: 24 * sheetScale, paddingTop: 16 * sheetScale, paddingBottom: 18 * sheetScale }
+          ]}
         >
-          <View className="flex-row items-center" style={{ gap: 18 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18 * sheetScale }}>
             <View
-              className="items-center justify-center rounded-3xl bg-slate-50"
-              style={{ width: 132, height: 152 }}
+              style={[
+                styles.preview,
+                { width: 132 * sheetScale, height: 152 * sheetScale, borderRadius: 24 * sheetScale }
+              ]}
             >
-              <Svg width={116} height={136} viewBox={previews[stage.id].viewBox}>
-                <Path d={previews[stage.id].path} fill="#E2E8F0" stroke="#94A3B8" strokeWidth={2} />
+              <Svg width={116 * sheetScale} height={136 * sheetScale} viewBox={preview.viewBox}>
+                <Path d={preview.path} fill="#90E2DE" stroke="#39A7B3" strokeWidth={2} />
               </Svg>
             </View>
 
-            <View className="flex-1">
-              <Text className="text-2xl font-bold text-gray-900">
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.stageTitle, { fontSize: 24 * sheetScale }]}>
                 {stage.id}. {stage.name}
               </Text>
-              <Text className="mt-2 text-base text-gray-500">{stageHint(stage)}</Text>
+              <Text style={[styles.stageHint, { fontSize: 15 * sheetScale, marginTop: 6 * sheetScale }]}>
+                {stageHint(stage)}
+              </Text>
 
-              <View className="mt-4 flex-row items-center" style={{ gap: 3 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 12 * sheetScale }}>
                 {STAGES.map((item) => (
                   <View
                     key={item.id}
-                    className={
-                      item.id <= stage.id
-                        ? 'h-2 flex-1 rounded-full bg-orange-400'
-                        : 'h-2 flex-1 rounded-full bg-slate-200'
-                    }
+                    style={{
+                      height: 8 * sheetScale,
+                      flex: 1,
+                      borderRadius: 999,
+                      backgroundColor: item.id <= stage.id ? '#FFB5C6' : '#C8ECEE'
+                    }}
                   />
                 ))}
               </View>
-              <Text className="mt-2 text-sm text-gray-400">
+              <Text style={[styles.difficulty, { fontSize: 13 * sheetScale, marginTop: 6 * sheetScale }]}>
                 난이도 {stage.id} / {STAGES.length}
               </Text>
             </View>
 
             <Pressable
               onPress={() => onStart(stage.id)}
-              className="items-center justify-center rounded-full"
-              style={{ width: 76, height: 76, backgroundColor: accent }}
+              accessibilityRole="button"
+              accessibilityLabel="시작"
+              style={[
+                styles.startButton,
+                SHADOW.card,
+                {
+                  width: 76 * sheetScale,
+                  height: 76 * sheetScale,
+                  borderRadius: 38 * sheetScale,
+                  backgroundColor: '#23BFCB'
+                }
+              ]}
             >
-              <Text className="text-2xl font-bold text-white">▶</Text>
+              <Svg width={26 * sheetScale} height={30 * sheetScale} viewBox="0 0 24 28">
+                <Path d="M4 2 L21 14 L4 26 Z" fill={COLORS.white} />
+              </Svg>
             </Pressable>
           </View>
         </Animated.View>
       ) : null}
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
+
+const styles = {
+  sheet: {
+    position: 'absolute' as const,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#E9FCFF',
+    borderTopWidth: 3,
+    borderTopColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28
+  },
+  preview: {
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: '#C9F4F3'
+  },
+  stageTitle: {
+    fontFamily: FONT,
+    color: '#17618E'
+  },
+  stageHint: {
+    fontFamily: FONT,
+    color: '#348398'
+  },
+  difficulty: {
+    fontFamily: FONT,
+    color: '#498A9A'
+  },
+  startButton: {
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const
+  },
+  mapPanel: {
+    flex: 1,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 28,
+    overflow: 'hidden' as const,
+    backgroundColor: withAlpha(COLORS.foam, 0.12)
+  },
+};

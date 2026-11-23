@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { Image, Pressable, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
 
 import { Game } from '@/games';
-import { CAROUSEL_SPRING } from '@/stage';
+import { CAROUSEL_SPRING, stageScale } from '@/stage';
+import { COLORS, FONT, SHADOW, TEXT_SHADOW, withAlpha } from '@/theme';
 
 /** Figma selector frame is 1280 x 832. */
 const DESIGN = {
@@ -26,10 +27,13 @@ type GameSlotProps = {
   size: number;
   activeSize: number;
   gap: number;
+  scale: number;
   onPress: () => void;
 };
 
-function GameSlot({ game, position, count, slot, size, activeSize, gap, onPress }: GameSlotProps) {
+function GameSlot({ game, position, count, slot, size, activeSize, gap, scale, onPress }: GameSlotProps) {
+  const Icon = game.icon;
+
   const style = useAnimatedStyle(() => {
     const wrapped = ((position - slot.value) % count + count) % count;
     const offset = wrapped >= count / 2 ? wrapped - count : wrapped;
@@ -38,7 +42,7 @@ function GameSlot({ game, position, count, slot, size, activeSize, gap, onPress 
 
     return {
       // fades out over the whole second slot so the spring overshoot cannot pop it back in
-      opacity: distance <= 1 ? 1 - 0.55 * distance : Math.max(0, 0.45 * (VISIBLE_SLOTS - distance)),
+      opacity: distance <= 1 ? 1 - 0.25 * distance : Math.max(0, 0.75 * (VISIBLE_SLOTS - distance)),
       transform: [{ translateX: offset * gap }, { scale: 1 + (activeSize / size - 1) * focus }]
     };
   });
@@ -49,10 +53,19 @@ function GameSlot({ game, position, count, slot, size, activeSize, gap, onPress 
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={game.title}
-        className="flex-1 items-center justify-center rounded-full"
-        style={{ backgroundColor: game.accent }}
+        style={[
+          styles.circle,
+          SHADOW.card,
+          { backgroundColor: withAlpha(game.accent, 0.16), borderWidth: 3 * scale }
+        ]}
       >
-        <View className="rounded-full bg-white/25" style={{ width: size * 0.34, height: size * 0.34 }} />
+        <View pointerEvents="none" style={{ position: 'absolute', inset: 5 * scale, borderRadius: 9999, borderWidth: scale, borderColor: '#FFFFFF40' }} />
+        <View pointerEvents="none" style={{ position: 'absolute', left: size * 0.18, top: size * 0.12, width: size * 0.35, height: size * 0.10, borderRadius: 9999, backgroundColor: '#FFFFFF80', transform: [{ rotate: '-30deg' }] }} />
+        {Icon ? (
+          <Icon width={size * 0.55} height={size * 0.55} />
+        ) : (
+          <View className="rounded-full bg-white/25" style={{ width: size * 0.34, height: size * 0.34 }} />
+        )}
       </Pressable>
     </Animated.View>
   );
@@ -64,8 +77,8 @@ type Props = {
 };
 
 export function GameSelector({ games, onSelect }: Props) {
-  const { width } = useWindowDimensions();
-  const scale = width / DESIGN.width;
+  const { width, height } = useWindowDimensions();
+  const scale = stageScale(width, height);
   const activeSize = DESIGN.active * scale;
   const sideSize = DESIGN.side * scale;
   const gap = DESIGN.slot * scale;
@@ -94,14 +107,20 @@ export function GameSelector({ games, onSelect }: Props) {
           size={sideSize}
           activeSize={activeSize}
           gap={gap}
+          scale={scale}
           onPress={() => (position === active ? onSelect(game) : setIndex(position))}
         />
       ))}
 
+      {/* Keep the entire mascot outside the animated cards: no crop or moving mask. */}
+      <View testID="selector-mascot" pointerEvents="none" style={{ position: 'absolute', top: -172 * scale, width: 160 * scale, height: 190 * scale, zIndex: 10, overflow: 'visible' }}>
+        <Image source={require('../assets/shellstore/customer.png')} resizeMode="contain" style={{ width: '100%', height: '100%' }} />
+      </View>
+
       <Text
         pointerEvents="none"
-        style={{ position: 'absolute', top: activeSize + 12, color: 'rgba(255,255,255,0.75)' }}
-        className="text-base"
+        numberOfLines={1}
+        style={[styles.label, TEXT_SHADOW, { top: activeSize + 14 * scale, fontSize: 28 * scale }]}
       >
         {games[active].title}
       </Text>
@@ -111,12 +130,16 @@ export function GameSelector({ games, onSelect }: Props) {
         hitSlop={12}
         accessibilityRole="button"
         accessibilityLabel="이전 게임"
-        style={{ position: 'absolute', left: '50%', marginLeft: -arrowOffset - arrowSize / 2, width: arrowSize, height: arrowSize }}
+        style={{
+          position: 'absolute',
+          left: '50%',
+          marginLeft: -arrowOffset - arrowSize / 2,
+          width: arrowSize,
+          height: arrowSize
+        }}
         className="items-center justify-center"
       >
-        <Svg width="75%" height="75%" viewBox="0 0 24 32">
-          <Path d="M20 2 L4 16 L20 30 Z" fill="#FFFFFF" fillOpacity={0.85} />
-        </Svg>
+        <BubbleArrow previous />
       </Pressable>
 
       <Pressable
@@ -124,13 +147,43 @@ export function GameSelector({ games, onSelect }: Props) {
         hitSlop={12}
         accessibilityRole="button"
         accessibilityLabel="다음 게임"
-        style={{ position: 'absolute', left: '50%', marginLeft: arrowOffset - arrowSize / 2, width: arrowSize, height: arrowSize }}
+        style={{
+          position: 'absolute',
+          left: '50%',
+          marginLeft: arrowOffset - arrowSize / 2,
+          width: arrowSize,
+          height: arrowSize
+        }}
         className="items-center justify-center"
       >
-        <Svg width="75%" height="75%" viewBox="0 0 24 32">
-          <Path d="M4 2 L20 16 L4 30 Z" fill="#FFFFFF" fillOpacity={0.85} />
-        </Svg>
+        <BubbleArrow />
       </Pressable>
     </View>
   );
 }
+
+function BubbleArrow({ previous = false }: { previous?: boolean }) {
+  return <Svg width="70%" height="70%" viewBox="0 0 100 100">
+    <Circle cx="50" cy="50" r="43" fill="#23DDF145" stroke="#D5FCFF" strokeWidth="4" />
+    <Circle cx="50" cy="50" r="35" fill="#00AADD30" stroke="#FFFFFF70" strokeWidth="2" />
+    <Ellipse cx="34" cy="25" rx="14" ry="7" fill="#FFFFFFBB" transform="rotate(-35 34 25)" />
+    <Circle cx="25" cy="63" r="5" fill="#DFFFFF" />
+    <Path d={previous ? 'M58 34 L40 50 L58 66' : 'M42 34 L60 50 L42 66'} fill="none" stroke="white" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>;
+}
+
+const styles = {
+  circle: {
+    flex: 1,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderRadius: 9999,
+    borderColor: '#FFFFFFB3'
+  },
+  label: {
+    position: 'absolute' as const,
+    fontFamily: FONT,
+    color: COLORS.white,
+    textAlign: 'center' as const
+  }
+};
