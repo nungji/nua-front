@@ -3,6 +3,7 @@ import { Image, View, type ImageSourcePropType } from 'react-native';
 // Original transparent character artwork supplied by the designer.
 export const GAME_CHARACTERS: Record<string, ImageSourcePropType> = {
   fruitstore: require('../assets/characters/shell.png'),
+  daiso: require('../assets/characters/mart.png'),
   mart: require('../assets/characters/mart.png'),
   repairman: require('../assets/characters/repairman.png'),
 };
