@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { gameReducer, initialState, STOCK_SIZE, availablePack, SHELL_PACKS } from './game.ts';
+import { gameReducer, initialState, STOCK_SIZE, availablePack, SHELL_PACKS, orderSize, ORDER_SIZES } from './game.ts';
 import { BASKET, FLOOR, floorSlotAt, containsPoint } from './interaction.ts';
 
 const advance = state => gameReducer(state, { type: 'advance', fromScreen: state.screen });
@@ -8,7 +8,7 @@ const start = () => Array.from({ length: 7 }).reduce(advance, initialState);
 const stage = (s, pack, slot) => gameReducer(s, { type: 'stage-pack', pack, slot });
 const basket = (s, slot) => gameReducer(s, { type: 'basket-floor', slot });
 const handOver = s => advance(advance(advance(gameReducer(s, { type: 'counter' }))));
-const exact = s => basket(stage(stage(s, 0, 0), 1, 0), 0);
+const exact = s => orderSize(s) === 5 ? basket(stage(stage(s, 0, 0), 1, 0), 0) : basket(stage(s, SHELL_PACKS.indexOf(orderSize(s)), 0), 0);
 const conserve = s => {
   const ids = [...s.selected, ...s.floor.flat(), ...SHELL_PACKS.flatMap((_, i) => availablePack(s, i))];
   assert.equal(ids.length, STOCK_SIZE);
@@ -99,10 +99,12 @@ test('excess and short orders preserve all floor work through correction', () =>
 test('four customers earn exactly twelve coins and reset floor between orders', () => {
   let s = start();
   for (let customer = 0; customer < 4; customer++) {
+    assert.equal(orderSize(s), ORDER_SIZES[customer]);
     s = exact(s);
     s = stage(s, 5, 0); // leftover floor work must not leak into the next order
     s = advance(handOver(s));
     assert.equal(s.coins, (customer + 1) * 3);
+    assert.equal(orderSize(s), ORDER_SIZES[customer]);
     s = advance(s);
     if (customer < 3) {
       assert.equal(s.floor.flat().length, 0);
@@ -142,4 +144,16 @@ test('floor and basket targets are separate and floor positions snap into six sl
   assert.equal(floorSlotAt(320, 530), 5);
   assert.equal(containsPoint(BASKET, 130, 660), true);
   assert.equal(containsPoint(BASKET, 130, 750), false);
+});
+
+test('every customer uses its own target for short, exact, and excess judgments', () => {
+  for (let completed = 0; completed < ORDER_SIZES.length; completed++) {
+    const target = ORDER_SIZES[completed];
+    for (const delta of [-1, 0, 1]) {
+      const s = { ...start(), completed, selected: Array.from({ length: target + delta }, (_, i) => i) };
+      assert.equal(handOver(s).screen, delta < 0 ? 19 : delta > 0 ? 15 : 14);
+      const correction = handOver(s);
+      if (delta !== 0) assert.equal(orderSize(gameReducer(correction, { type: 'shelf' })), target);
+    }
+  }
 });

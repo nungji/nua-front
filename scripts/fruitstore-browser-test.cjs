@@ -25,9 +25,11 @@ const assert = require('node:assert/strict');
     await page.goto(base);
     await button('이전 게임').click();
     await button('조개 상점').click();
-    await button('게임으로 들어가기').click();
+    await button('조개 5개 주문 확인').waitFor();
+    assert.equal(await page.getByTestId('shellstore-welcome').count(), 0);
     for (let customer = 0; customer < 4; customer++) {
-      await button('조개 5개 주문 확인').click(); await screen(8);
+      const target = [5, 4, 6, 7][customer];
+      await button(`조개 ${target}개 주문 확인`).click(); await screen(8);
       if (customer === 0) {
         // Clicking or pressing Enter does not transfer a shelf pack.
         await pack(1,2).click(); await pack(1,2).tap();
@@ -69,25 +71,29 @@ const assert = require('node:assert/strict');
         await floor(1,2).click(); await floor(2,3).click();
         await floor(1,2).waitFor(); await floor(2,3).waitFor();
         await drag(floor(1,2), [[195,465]]); await drag(floor(2,5), [[130,660]]);
+        await put(7,2);
       }
-      const count = customer === 1 ? 6 : customer === 2 ? 3 : 5;
+      const count = customer === 1 ? 6 : customer === 2 ? 3 : customer === 3 ? 7 : 5;
       await button('계산대로 이동').click(); await button(`조개 ${count}개 건네주기`).click();
       if (customer === 1) {
         await button('조개가 많아요. 진열대에서 되돌리기').click();
         await drag(basket(6), [[80,465]]);
         await button('선택한 바닥 묶음에서 조개 하나 떼기').click();
-        await floor(2,1).waitFor(); await drag(floor(1,5), [[130,660]]); // extra stays on floor
+        await floor(2,1).waitFor();
+        await button('선택한 바닥 묶음에서 조개 하나 떼기').click();
+        await drag(floor(1,4), [[130,660]]); // extra stays on floor
       } else if (customer === 2) {
-        await button('조개가 모자라요. 진열대에서 더 담기').click(); await put(1,2);
+        await button('조개가 모자라요. 진열대에서 더 담기').click(); await put(8,3);
       }
-      if (customer === 1 || customer === 2) { await button('계산대로 이동').click(); await button('조개 5개 건네주기').click(); }
+      if (customer === 1 || customer === 2) { await button('계산대로 이동').click(); await button(`조개 ${target}개 건네주기`).click(); }
       await screen(24);
       await button(customer === 3 ? '오늘 장사 마치기' : '다음 손님 맞이하기').click();
       console.log(`Customer ${customer+1} passed`);
     }
     await button('오늘 장사 결과 보기').click(); await screen(26);
     assert.equal(await page.getByTestId('shellstore-total').innerText(),'12');
-    await button('가게로 돌아가 새로 시작').click(); await page.getByTestId('shellstore-welcome').waitFor();
+    await button('가게로 돌아가 새로 시작').click(); await button('조개 5개 주문 확인').waitFor();
+    assert.equal(await page.getByTestId('shellstore-welcome').count(), 0);
     await button('게임 선택으로 돌아가기').click(); await button('다음 게임').waitFor();
     for (const [width,height] of [[393,852],[375,667],[320,568],[852,393]]) {
       await page.setViewportSize({width,height}); await page.goto(`${base}/games/fruitstore?screen=8`); await screen(8);
