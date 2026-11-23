@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { Image, Pressable, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
 
 import { Game } from '@/games';
 import { CAROUSEL_SPRING, stageScale } from '@/stage';
@@ -112,6 +112,14 @@ export function GameSelector({ games, onSelect }: Props) {
         />
       ))}
 
+      <View pointerEvents="none" style={{ position: 'absolute', top: -144 * scale, width: 190 * scale, height: 163 * scale, overflow: 'hidden' }}>
+        <Image source={require('../assets/shellstore/customer.png')} resizeMode="contain" style={{ width: 190 * scale, height: 230 * scale }} />
+      </View>
+      <Svg pointerEvents="none" width={activeSize} height={38 * scale} viewBox="0 0 249 38" style={{ position: 'absolute', top: -8 * scale }}>
+        <Ellipse cx="71" cy="20" rx="19" ry="10" transform="rotate(-20 71 20)" fill="#12BFF1" stroke="#D9FCFF" strokeWidth="3" />
+        <Ellipse cx="178" cy="20" rx="19" ry="10" transform="rotate(20 178 20)" fill="#12BFF1" stroke="#D9FCFF" strokeWidth="3" />
+      </Svg>
+
       <Text
         pointerEvents="none"
         numberOfLines={1}
@@ -134,9 +142,7 @@ export function GameSelector({ games, onSelect }: Props) {
         }}
         className="items-center justify-center"
       >
-        <Svg width="75%" height="75%" viewBox="0 0 24 32">
-          <Path d="M20 2 L4 16 L20 30 Z" fill={COLORS.white} fillOpacity={0.95} />
-        </Svg>
+        <BubbleArrow previous />
       </Pressable>
 
       <Pressable
@@ -153,12 +159,20 @@ export function GameSelector({ games, onSelect }: Props) {
         }}
         className="items-center justify-center"
       >
-        <Svg width="75%" height="75%" viewBox="0 0 24 32">
-          <Path d="M4 2 L20 16 L4 30 Z" fill={COLORS.white} fillOpacity={0.95} />
-        </Svg>
+        <BubbleArrow />
       </Pressable>
     </View>
   );
+}
+
+function BubbleArrow({ previous = false }: { previous?: boolean }) {
+  return <Svg width="70%" height="70%" viewBox="0 0 100 100">
+    <Circle cx="50" cy="50" r="43" fill="#23DDF145" stroke="#D5FCFF" strokeWidth="4" />
+    <Circle cx="50" cy="50" r="35" fill="#00AADD30" stroke="#FFFFFF70" strokeWidth="2" />
+    <Ellipse cx="34" cy="25" rx="14" ry="7" fill="#FFFFFFBB" transform="rotate(-35 34 25)" />
+    <Circle cx="25" cy="63" r="5" fill="#DFFFFF" />
+    <Path d={previous ? 'M58 34 L40 50 L58 66' : 'M42 34 L60 50 L42 66'} fill="none" stroke="white" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>;
 }
 
 const styles = {
