@@ -7,6 +7,7 @@ import { getMartWordImage } from '@/data/martWordImages';
 import { MART_CORNERS } from '@/data/martWords';
 import { MART_CORNER_ORDER } from '@/enums';
 import { useMartStore } from '@/store/useMartStore';
+import { FONT } from '@/theme';
 
 export default function MartWordbook() {
   const completedWords = useMartStore((state) => state.completedWords);
@@ -20,7 +21,7 @@ export default function MartWordbook() {
             const corner = MART_CORNERS[cornerId];
             return (
               <View key={cornerId}>
-                <Text style={{ fontSize: 15, fontWeight: '800', color: 'white', marginBottom: 12 }}>
+                <Text style={{ fontSize: 15, fontFamily: FONT, color: 'white', marginBottom: 12 }}>
                   {corner.title}
                 </Text>
                 <View className="flex-row flex-wrap gap-4">

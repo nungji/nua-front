@@ -4,6 +4,7 @@ import { useMartSyllableSound } from '@/hooks/useMartWordSound';
 import { OceanNextButton } from '../OceanCircleButton';
 import { OceanProgressPill } from '../OceanDecor';
 import { MartImagePlaceholder } from '../MartImagePlaceholder';
+import { FONT } from '@/theme';
 
 interface StageMeetWordProps {
   word: string;
@@ -32,7 +33,7 @@ function SyllableTile({ syllable }: { syllable: string }) {
         justifyContent: 'center',
       }}
     >
-      <Text style={{ fontSize: 36, fontWeight: '800', color: '#1B3A6B' }}>{syllable}</Text>
+      <Text style={{ fontSize: 36, fontFamily: FONT, color: '#1B3A6B' }}>{syllable}</Text>
     </Pressable>
   );
 }

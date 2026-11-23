@@ -4,6 +4,7 @@ import Svg, { Defs, RadialGradient, Stop, Circle } from 'react-native-svg';
 import { getMartWordImage } from '@/data/martWordImages';
 import { OceanProgressPill } from '../OceanDecor';
 import { MartImagePlaceholder } from '../MartImagePlaceholder';
+import { FONT } from '@/theme';
 
 interface StageMeaningQuizProps {
   word: string;
@@ -74,7 +75,7 @@ export function StageMeaningQuiz({ word, options, onCorrect }: StageMeaningQuizP
                   borderColor: isSelected ? '#FF8A1F' : '#8FD0FF',
                 }}
               >
-                <Text style={{ fontSize: 20, fontWeight: '800', color: '#1B3A6B' }}>{option}</Text>
+                <Text style={{ fontSize: 20, fontFamily: FONT, color: '#1B3A6B' }}>{option}</Text>
               </Pressable>
             );
           })}

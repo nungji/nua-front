@@ -7,6 +7,7 @@ import { isVowelJamo, pickDistractorJamo, vowelSitsBelow } from '@/utils/hangul'
 import { OceanRetryButton } from '../OceanCircleButton';
 import { OceanProgressPill } from '../OceanDecor';
 import { MartImagePlaceholder } from '../MartImagePlaceholder';
+import { FONT } from '@/theme';
 
 interface StageAssembleProps {
   word: string;
@@ -71,7 +72,7 @@ function JamoTile({ jamo, onPress }: { jamo: string; onPress: () => void }) {
           </Defs>
           <Rect width="100%" height="100%" fill={`url(#${gradientId})`} />
         </Svg>
-        <Text style={{ fontSize: 34, fontWeight: '800', color: 'white' }}>{jamo}</Text>
+        <Text style={{ fontSize: 34, fontFamily: FONT, color: 'white' }}>{jamo}</Text>
       </View>
     </Pressable>
   );
@@ -342,7 +343,7 @@ function JamoSlot({
         borderStyle,
       }}
     >
-      {display ? <Text style={{ fontSize: 17, fontWeight: '800', color: textColor }}>{display}</Text> : null}
+      {display ? <Text style={{ fontSize: 17, fontFamily: FONT, color: textColor }}>{display}</Text> : null}
     </View>
   );
 }

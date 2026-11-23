@@ -1,5 +1,6 @@
 import { Text, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
+import { FONT } from '@/theme';
 
 /** 제목 pill 옆의 작은 반짝이 별 (타이틀 pill, 진행도 pill 공통 장식). */
 export function OceanSparkleStar({ size = 22 }: { size?: number }) {
@@ -65,7 +66,7 @@ export function OceanTitlePill({ title }: OceanTitlePillProps) {
       }}
     >
       <OceanSparkleStar size={20} />
-      <Text numberOfLines={1} style={{ flex: 1, textAlign: 'center', fontSize: 16, fontWeight: '800', color: '#1B3A6B' }}>
+      <Text numberOfLines={1} style={{ flex: 1, textAlign: 'center', fontSize: 16, fontFamily: FONT, color: '#1B3A6B' }}>
         {title}
       </Text>
     </View>

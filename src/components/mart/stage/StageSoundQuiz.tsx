@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { useMartWordSound } from '@/hooks/useMartWordSound';
 import { OceanSoundButton } from '../OceanCircleButton';
 import { OceanProgressPill } from '../OceanDecor';
+import { FONT } from '@/theme';
 
 interface StageSoundQuizProps {
   word: string;
@@ -55,7 +56,7 @@ export function StageSoundQuiz({ word, options, onCorrect }: StageSoundQuizProps
                   borderColor: isSelected ? '#FF8A1F' : '#8FD0FF',
                 }}
               >
-                <Text style={{ fontSize: 20, fontWeight: '800', color: '#1B3A6B' }}>{option}</Text>
+                <Text style={{ fontSize: 20, fontFamily: FONT, color: '#1B3A6B' }}>{option}</Text>
               </Pressable>
             );
           })}

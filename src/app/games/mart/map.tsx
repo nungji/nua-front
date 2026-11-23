@@ -9,6 +9,7 @@ import { OceanTopBar } from '@/components/mart/OceanTopBar';
 import { getCornerWords, MART_CORNERS } from '@/data/martWords';
 import { MART_CORNER_ORDER } from '@/enums';
 import { useMartStore } from '@/store/useMartStore';
+import { FONT } from '@/theme';
 
 const NUA_MASCOT = require('../../../assets/mart/nua-mascot.png');
 
@@ -66,8 +67,8 @@ export default function MartMap() {
                       alignItems: 'center',
                     }}
                   >
-                    <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontSize: 40, fontWeight: '900', color: locked ? '#8E99AB' : '#1B3A6B' }}>
-                      {locked ? '???' : corner.title}
+                    <Text numberOfLines={1} adjustsFontSizeToFit style={{ fontSize: 40, fontFamily: FONT, color: locked ? '#8E99AB' : '#1B3A6B' }}>
+                      {locked ? ' ' : corner.title}
                     </Text>
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16, marginBottom: 12 }}>
@@ -82,7 +83,7 @@ export default function MartMap() {
                     >
                       <View style={{ width: `${progress * 100}%`, height: '100%', backgroundColor: '#5CCB4E' }} />
                     </View>
-                    <Text style={{ fontSize: 16, fontWeight: '800', color: 'white' }}>
+                    <Text style={{ fontSize: 16, fontFamily: FONT, color: 'white' }}>
                       {doneCount} / {words.length}
                     </Text>
                   </View>
