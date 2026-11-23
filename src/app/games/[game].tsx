@@ -1,4 +1,4 @@
-import { Redirect, useLocalSearchParams } from 'expo-router';
+import { Redirect, Stack, useLocalSearchParams } from 'expo-router';
 
 import { GAMES, gameIndexById } from '@/games';
 
@@ -12,5 +12,10 @@ export default function GameRoute() {
 
   const entry = GAMES[index];
 
-  return <entry.Scene game={entry} index={index} />;
+  return (
+    <>
+      <Stack.Screen options={{ orientation: entry.id === 'fruitstore' ? 'portrait' : 'landscape' }} />
+      <entry.Scene game={entry} index={index} />
+    </>
+  );
 }

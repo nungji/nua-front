@@ -1,9 +1,20 @@
 import { Easing } from 'react-native-reanimated';
 
-/** Figma ease presets carry no control points, these are approximations of SLOW / QUICK. */
-export const CURTAIN_DURATION = 417;
-export const CURTAIN_HOLD = 100;
-export const CURTAIN_EASING = Easing.bezier(0.16, 1, 0.3, 1);
+/**
+ * Scene changes are hidden behind a rising wall of soap bubbles. The route swaps while the
+ * screen is fully covered, then the bubbles keep travelling up and thin out.
+ */
+export const BUBBLE_COUNT = 72;
+export const BUBBLE_RISE_MS = 380;
+export const BUBBLE_RISE_SPREAD = 150;
+export const BUBBLE_EXIT_MS = 420;
+export const BUBBLE_EXIT_SPREAD = 130;
+/** How long the screen stays covered after the swap. */
+export const BUBBLE_HOLD_MS = 110;
+/** Total time from tap until the scene is covered, used to gate the route swap. */
+export const BUBBLE_COVER_MS = BUBBLE_RISE_MS + BUBBLE_RISE_SPREAD + 30;
+export const BUBBLE_RISE_EASING = Easing.out(Easing.cubic);
+export const BUBBLE_EXIT_EASING = Easing.in(Easing.quad);
 /**
  * cubic-bezier(0.1, 0.9, 0.2, 1) decelerates but never overshoots, so it reads as a snap rather
  * than a spring. These values follow the same profile (fast start, long settle) and add one
@@ -18,15 +29,17 @@ export const CAROUSEL_SPRING = {
   restSpeedThreshold: 0.005
 };
 
-/** The selector keeps a sliver of curtain on screen, every other scene hides it entirely. */
-export const SELECTOR_ROUTE = '/';
-export const PEEK_WIDTH = 45;
-export const PEEK_REFERENCE_WIDTH = 1280;
+/** Every layout number in the app is authored against this Figma frame. */
+export const DESIGN_FRAME = { width: 1280, height: 832 };
+const MIN_STAGE_SCALE = 0.28;
 
-export function peekPixels(route: string, width: number): number {
-  if (route !== SELECTOR_ROUTE) {
-    return 0;
-  }
+/** Fits the design frame into the viewport without overflowing either axis. */
+export function stageScale(width: number, height: number): number {
+  const scale = Math.min(width / DESIGN_FRAME.width, height / DESIGN_FRAME.height);
 
-  return Math.round((PEEK_WIDTH * width) / PEEK_REFERENCE_WIDTH);
+  return Math.max(scale, MIN_STAGE_SCALE);
 }
+
+
+/** Shared home route used by the navigation hook. */
+export const SELECTOR_ROUTE = '/';

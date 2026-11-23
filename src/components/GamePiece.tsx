@@ -129,13 +129,7 @@ export function GamePiece({
         animatedStyle
       ]}
     >
-      <PieceGraphic
-        piece={piece}
-        edges={piece.edges}
-        fill={placed ? piece.color : piece.tone}
-        stroke="#FFFFFF"
-        strokeWidth={1.5}
-      />
+      <PieceGraphic piece={piece} edges={piece.edges} fill={placed ? piece.color : piece.tone} />
     </Animated.View>
   );
 }

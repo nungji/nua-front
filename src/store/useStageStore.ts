@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { CURTAIN_HOLD } from '@/stage';
+import { BUBBLE_HOLD_MS } from '@/stage';
 
 type StagePhase = 'open' | 'closed';
 
@@ -26,7 +26,7 @@ export const useStageStore = create<StageState>((set, get) => ({
     set({ phase: 'closed', pending: action });
   },
 
-  // called by the curtain animation once it stops, so the scene swaps while fully covered
+  // called by the bubble animation once the screen is covered, so the scene swaps unseen
   settle: (phase) => {
     if (phase !== 'closed' || get().phase !== 'closed') {
       return;
@@ -40,6 +40,6 @@ export const useStageStore = create<StageState>((set, get) => ({
       if (get().phase === 'closed') {
         set({ phase: 'open' });
       }
-    }, CURTAIN_HOLD);
+    }, BUBBLE_HOLD_MS);
   }
 }));

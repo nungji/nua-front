@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Path, Svg } from 'react-native-svg';
 
 import { GamePiece } from '@/components/GamePiece';
+import { StageBackdrop } from '@/components/StageBackdrop';
+import { TopBar } from '@/components/TopBar';
 import { PieceGraphic } from '@/components/PieceGraphic';
 import { pickPiece } from '@/games/repairman/game/hit';
 import {
@@ -20,9 +22,11 @@ import {
   visualCenter
 } from '@/games/repairman/game/physics';
 import { piecePolygon } from '@/games/repairman/game/shapes';
-import { buildPuzzle, findStage, PIECE_PAD, SNAP_RADIUS, tiltFor } from '@/games/repairman/game/stages';
+import { buildPuzzle, findStage, PIECE_PAD, puzzleScale, SNAP_RADIUS, tiltFor } from '@/games/repairman/game/stages';
 import { Piece } from '@/games/repairman/game/types';
 import { useRepairmanStore } from '@/store/useRepairmanStore';
+import { stageScale } from '@/stage';
+import { COLORS, FONT, SHADOW, TOP_BAR_HEIGHT } from '@/theme';
 
 const FIXED_STEP = 16.666;
 const FLIP_HOLD = 200;
@@ -36,12 +40,17 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   const stage = useMemo(() => findStage(stageId), [stageId]);
 
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const scale = stageScale(windowWidth, windowHeight);
   const size = useMemo(() => {
-    const width = Math.min(windowWidth - 16, 460);
-    const height = Math.max(272, Math.min(windowHeight - 200, Math.round(width * 0.72)));
+    const cap = Math.max(480, 760 * Math.min(scale, 1));
+    const availableHeight = windowHeight - (TOP_BAR_HEIGHT + 88) * scale;
+    const width = Math.round(
+      Math.max(320, Math.min(windowWidth - 48 * scale, availableHeight / 0.62, cap))
+    );
 
-    return { width, height };
-  }, [windowWidth, windowHeight]);
+    return { width, height: Math.round(width * 0.62) };
+  }, [windowWidth, windowHeight, scale]);
+
 
   const storedStage = useRepairmanStore((state) => state.stageId);
   const placed = useRepairmanStore((state) => state.placed);
@@ -64,6 +73,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   }, [stageId, storedStage, openStage]);
 
   const puzzle = useMemo(() => buildPuzzle(stage, size), [stage, size]);
+  const snapRadius = SNAP_RADIUS * puzzleScale(size);
   const pieces = puzzle.pieces;
   const placedCount = pieces.filter((piece) => placed[piece.id]).length;
   const completed = placedCount === pieces.length;
@@ -239,7 +249,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       const aligned = piece.symmetry[orientation * 2 + (flipped[piece.id] ? 1 : 0)] ?? false;
       const blocked = Boolean(piece.requires && !placed[piece.requires]);
 
-      if (distance <= SNAP_RADIUS && aligned && !blocked) {
+      if (distance <= snapRadius && aligned && !blocked) {
         snap(piece.id);
         return;
       }
@@ -365,18 +375,19 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   const gesture = Gesture.Exclusive(pan, longPress, tap);
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <View className="flex-row items-center justify-between px-5 pt-2">
-        <Pressable onPress={onExit} hitSlop={16}>
-          <Text className="text-lg text-gray-500">나가기</Text>
-        </Pressable>
-        <Text className="text-xl font-semibold text-gray-900">
-          {stage.id}. {puzzle.stageName}
-        </Text>
-        <Pressable onPress={reset} hitSlop={16}>
-          <Text className="text-lg text-gray-500">다시</Text>
-        </Pressable>
-      </View>
+    <View className="flex-1" style={{ backgroundColor: COLORS.oceanDeep }}>
+      <StageBackdrop dim={0.18} />
+
+      <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
+        <TopBar
+          title={`${stage.id}. ${puzzle.stageName}`}
+          onBack={onExit}
+          right={
+            <Pressable onPress={reset} hitSlop={8} accessibilityRole="button" accessibilityLabel="다시" style={styles.resetButton}>
+              <Text style={styles.resetText}>다시</Text>
+            </Pressable>
+          }
+        />
 
       <View className="flex-1 items-center justify-center">
         <GestureDetector gesture={gesture}>
@@ -389,6 +400,12 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
               borderColor: '#F05A28'
             }}
           >
+            {/* assembly pad — the silhouette target sits on top of the workbench */}
+            <View
+              pointerEvents="none"
+              style={[styles.zone, { left: size.width * 0.5 + 6, right: 10, top: 10, bottom: 12, backgroundColor: 'rgba(228, 243, 252, 0.9)' }]}
+            />
+
             {puzzle.slots
               ? pieces.map((piece) => (
                   <Ghost key={piece.id} piece={piece} fill={piece.color} opacity={0.16} />
@@ -449,13 +466,13 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       </View>
 
       <View className="items-center pb-5">
-        <Text className="text-base text-gray-500">
+        <Text className="text-gray-500" style={{ fontSize: Math.max(12, 16 * scale) }}>
           놓은 조각 {placedCount}/{pieces.length} · 시도 {snaps + misses}
         </Text>
         {completed ? (
-          <Text className="mt-1 text-3xl font-bold text-orange-500">완성!</Text>
+          <Text className="mt-1 font-bold text-orange-500" style={{ fontSize: Math.max(20, 30 * scale) }}>완성!</Text>
         ) : (
-          <Text className="mt-1 text-base text-gray-400">
+          <Text className="mt-1 text-gray-400" style={{ fontSize: Math.max(12, 16 * scale) }}>
             {stage.rotate && stage.flip
               ? '탭=돌리기 · 200ms 누르면 뒤집기'
               : stage.rotate
@@ -466,7 +483,8 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
           </Text>
         )}
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -521,3 +539,28 @@ function Slot({ piece }: { piece: Piece }) {
     </View>
   );
 }
+
+const styles = {
+  zone: {
+    position: 'absolute' as const,
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.85)'
+  },
+  resetButton: {
+    height: 44,
+    paddingHorizontal: 18,
+    borderRadius: 22,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: COLORS.white,
+    borderWidth: 4,
+    borderColor: COLORS.orange,
+    ...SHADOW.button
+  },
+  resetText: {
+    fontFamily: FONT,
+    fontSize: 18,
+    color: COLORS.orangeDeep
+  }
+};
