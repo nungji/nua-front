@@ -24,8 +24,8 @@ export const ITEM_LABELS: Record<ItemId, string> = {
 export const STAGES: Stage[] = [
   {
     id: 1,
-    customer: 'squirrel',
-    name: '다람쥐',
+    customer: 'fish',
+    name: '물고기',
     problem: 'dryFlower',
     need: 'water',
     answer: 'bucket',
@@ -68,8 +68,8 @@ export const STAGES: Stage[] = [
   },
   {
     id: 5,
-    customer: 'monkey',
-    name: '원숭이',
+    customer: 'octopus',
+    name: '오징어',
     problem: 'highFruit',
     need: 'high',
     answer: 'longStick',

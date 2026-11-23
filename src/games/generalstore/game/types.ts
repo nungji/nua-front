@@ -1,4 +1,4 @@
-export type CustomerId = 'squirrel' | 'cat' | 'rabbit' | 'fox' | 'monkey';
+export type CustomerId = 'squirrel' | 'cat' | 'rabbit' | 'fox' | 'monkey' | 'fish' | 'octopus';
 
 export type ItemId =
   | 'bucket'

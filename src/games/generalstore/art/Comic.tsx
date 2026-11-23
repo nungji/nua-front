@@ -4,7 +4,7 @@ import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
 
 import type { ComicCut } from '../game/types';
 import { PanelBgArt } from './Bgs';
-import { Customer } from './Customer';
+import { CustomerArt } from './Sea';
 import { ItemArt } from './Item';
 import { NeedIcon } from './NeedIcon';
 import { ProblemArt } from './Problem';
@@ -102,7 +102,7 @@ export function ComicPanel({ cut, width, height }: PanelProps) {
       ) : null}
 
       <View style={{ position: 'absolute', bottom: 0, ...customerStyle }}>
-        <Customer id={cut.customer} mood={cut.mood} width={customerWidth} />
+        <CustomerArt id={cut.customer} mood={cut.mood} width={customerWidth} />
       </View>
 
       {cut.need ? (
@@ -155,7 +155,7 @@ export function SceneCut({ cut, width, height, fixed = false, overlay }: ScenePr
       ) : null}
 
       <View style={{ position: 'absolute', left: '4%', bottom: 0 }}>
-        <Customer id={cut.customer} mood={cut.mood} width={customerWidth} />
+        <CustomerArt id={cut.customer} mood={cut.mood} width={customerWidth} />
       </View>
 
       {cut.item ? (

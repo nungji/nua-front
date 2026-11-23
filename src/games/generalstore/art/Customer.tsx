@@ -10,7 +10,9 @@ type Coat = {
   face: string;
 };
 
-const COATS: Record<CustomerId, Coat> = {
+type LandCustomer = Exclude<CustomerId, 'fish' | 'octopus'>;
+
+const COATS: Record<LandCustomer, Coat> = {
   squirrel: { fur: '#C98A5B', belly: '#F4DCC0', inner: '#E7B48C', face: '#F4DCC0' },
   cat: { fur: '#E8A24B', belly: '#F7DDB4', inner: '#F0A6A6', face: '#F7DDB4' },
   rabbit: { fur: '#F1E7DC', belly: '#FFFDF7', inner: '#F3B8C0', face: '#FFFDF7' },
@@ -18,7 +20,7 @@ const COATS: Record<CustomerId, Coat> = {
   monkey: { fur: '#A9754F', belly: '#E8C9A8', inner: '#E8C9A8', face: '#E8C9A8' }
 };
 
-function Ears({ id, coat }: { id: CustomerId; coat: Coat }) {
+function Ears({ id, coat }: { id: LandCustomer; coat: Coat }) {
   if (id === 'rabbit') {
     return (
       <>
@@ -116,7 +118,7 @@ function Face({ mood }: { mood: Mood }) {
 }
 
 type Props = {
-  id: CustomerId;
+  id: LandCustomer;
   mood?: Mood;
   width?: number;
 };

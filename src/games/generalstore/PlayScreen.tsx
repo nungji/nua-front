@@ -8,9 +8,9 @@ import { useGeneralStore } from '@/store/useGeneralStore';
 import { ComicPanel, CutDots, SceneCut } from './art/Comic';
 import { FallingDrops, Sparkles, SteamWisps } from './art/Effects';
 import { BackIcon, CheckIcon, CrossIcon, ForwardIcon } from './art/Icons';
-import { Stall } from './art/Stall';
+import { Mart } from './art/Mart';
 import { ACCENT, ACCENT_SOFT, BG, INK, LINE, MUTED, WATER } from './art/colors';
-import { USE_BG } from './game/comics';
+import { useComic } from './game/comics';
 import { findStage, STAGES, stageComic } from './game/stages';
 import type { ItemId } from './game/types';
 
@@ -18,9 +18,9 @@ import type { ItemId } from './game/types';
 const VERDICT_DELAY = 900;
 /** How long a failed attempt stays on screen before the shop comes back. */
 const FAIL_DELAY = 1600;
-const GAP = 10;
+const GAP = 12;
 
-type Phase = 'comic' | 'shelf' | 'hand' | 'use' | 'result';
+type Phase = 'comic' | 'shelf' | 'use' | 'result';
 
 type PlayScreenProps = {
   stageId: number;
@@ -63,6 +63,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
 
   const [phase, setPhase] = useState<Phase>('comic');
   const [cut, setCut] = useState(0);
+  const [step, setStep] = useState(0);
   const [picked, setPicked] = useState<ItemId | null>(null);
   const [tried, setTried] = useState<ItemId[]>([]);
   const [outcome, setOutcome] = useState<'pending' | 'success' | 'fail'>('pending');
@@ -108,6 +109,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       setTried((current) => [...current, picked]);
       setPicked(null);
       setOutcome('pending');
+      setStep(0);
       setPhase('shelf');
     }, FAIL_DELAY);
 
@@ -116,16 +118,18 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
 
   const hintItem = misses >= 2 ? stage.answer : null;
 
-  // The body box drives every panel, so landscape and portrait both get sane art sizes.
-  const bodyWidth = width - (landscape ? 32 : 32);
-  const bodyHeight = Math.max(150, height - (landscape ? 96 : 176));
+  const bodyWidth = width - 32;
+  const bodyHeight = Math.max(150, height - (landscape ? 92 : 172));
+  // Cuts are 1:1, so a page holds two squares that fit the shorter axis.
+  const panel = landscape
+    ? Math.min(bodyHeight, (bodyWidth - GAP) / 2)
+    : Math.min(bodyWidth, (bodyHeight - GAP) / 2);
 
-  const comicWidth = landscape
-    ? Math.min((bodyWidth - GAP) / 2, (bodyHeight * 4) / 3)
-    : Math.min(bodyWidth, ((bodyHeight - GAP) / 2) * (4 / 3));
-  const comicHeight = (comicWidth * 3) / 4;
+  const useCuts = picked === null ? [] : useComic(stage, picked);
+  const useLead = useCuts.slice(0, Math.max(0, useCuts.length - 1));
+  const resultCut = useCuts[useCuts.length - 1];
 
-  function advance() {
+  function nextPage() {
     if (phase === 'comic') {
       if (cut + 2 <= cuts.length - 1) {
         setCut(cut + 2);
@@ -135,30 +139,21 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       return;
     }
 
-    if (phase === 'hand') {
-      setPhase('use');
-      return;
-    }
-
     if (phase === 'use') {
-      setPhase('result');
+      if (step + 2 <= useLead.length - 1) {
+        setStep(step + 2);
+      } else {
+        setPhase('result');
+      }
     }
   }
 
   function pick(item: ItemId) {
     setPicked(item);
     setOutcome('pending');
-    setPhase('hand');
+    setStep(0);
+    setPhase('use');
   }
-
-  const useCut = {
-    bg: USE_BG[stage.problem],
-    customer: stage.customer,
-    mood: (outcome === 'success' ? 'happy' : 'sad') as 'happy' | 'sad',
-    side: 'right' as const,
-    problem: stage.problem,
-    item: picked ?? undefined
-  };
 
   function renderResultOverlay() {
     if (picked === null) {
@@ -208,11 +203,11 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   function nextButton(label: string) {
     return (
       <Pressable
-        onPress={advance}
+        onPress={nextPage}
         accessibilityRole="button"
         accessibilityLabel={label}
         className="items-center justify-center rounded-full"
-        style={{ width: 48, height: 48, backgroundColor: ACCENT }}
+        style={{ width: 46, height: 46, backgroundColor: ACCENT }}
       >
         <ForwardIcon size={20} />
       </Pressable>
@@ -220,14 +215,14 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   }
 
   function renderFooter() {
-    if (phase === 'comic') {
+    if (phase === 'comic' || phase === 'use') {
+      const total = phase === 'comic' ? cuts.length : useCuts.length;
+      const index = phase === 'comic' ? cut : step;
+
       return (
-        <View
-          className="flex-row items-center px-4 pb-3 pt-2"
-          style={{ justifyContent: 'space-between' }}
-        >
-          <View style={{ width: 48 }} />
-          <CutDots count={cuts.length} index={cut} color={ACCENT} />
+        <View className="flex-row items-center px-4 pb-2 pt-1" style={{ justifyContent: 'space-between' }}>
+          <View style={{ width: 46 }} />
+          <CutDots count={total} index={index} color={ACCENT} />
           {nextButton('다음 컷')}
         </View>
       );
@@ -235,7 +230,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
 
     if (phase === 'shelf') {
       return (
-        <View className="items-center pb-3 pt-1">
+        <View className="items-center pb-2 pt-1">
           <Text className="text-sm" style={{ color: MUTED }}>
             손님에게 줄 물건을 골라 주세요
           </Text>
@@ -243,24 +238,14 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       );
     }
 
-    if (phase === 'hand' || phase === 'use') {
-      return (
-        <View className="flex-row items-center px-4 pb-3 pt-2" style={{ justifyContent: 'space-between' }}>
-          <View style={{ width: 48 }} />
-          <CutDots count={3} index={phase === 'hand' ? 0 : 1} color={ACCENT} />
-          {nextButton('다음 컷')}
-        </View>
-      );
-    }
-
     if (outcome === 'success') {
       return (
-        <View className="items-center pb-3 pt-1">
+        <View className="items-center pb-2 pt-1">
           <Pressable
             onPress={onExit}
             accessibilityRole="button"
             accessibilityLabel="가게로"
-            className="flex-row items-center justify-center rounded-full px-6 py-2.5"
+            className="flex-row items-center justify-center rounded-full px-6 py-2"
             style={{ backgroundColor: ACCENT, gap: 8 }}
           >
             <Text className="text-base font-bold text-white">가게로</Text>
@@ -271,11 +256,16 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
     }
 
     return (
-      <View className="flex-row items-center px-4 pb-3 pt-2" style={{ justifyContent: 'center' }}>
-        <CutDots count={3} index={2} color={ACCENT} />
+      <View className="flex-row items-center px-4 pb-2 pt-1" style={{ justifyContent: 'center' }}>
+        <CutDots count={useCuts.length} index={useCuts.length - 1} color={ACCENT} />
       </View>
     );
   }
+
+  const comicPage =
+    phase === 'comic'
+      ? cuts.slice(cut - (cut % 2), cut - (cut % 2) + 2)
+      : useLead.slice(step - (step % 2), step - (step % 2) + 2);
 
   return (
     <SafeAreaView className="flex-1" edges={['top']} style={{ backgroundColor: BG }}>
@@ -290,50 +280,43 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       </View>
 
       <View className="mx-4 flex-1">
-        {phase === 'comic' ? (
+        {phase === 'comic' || phase === 'use' ? (
           <View
             className="flex-1 items-center justify-center"
             style={{ flexDirection: landscape ? 'row' : 'column', gap: GAP }}
           >
-            {cuts.slice(cut - (cut % 2), cut - (cut % 2) + 2).map((item, index) => (
-              <ComicPanel
-                key={`cut-${cut}-${index}`}
-                cut={item}
-                width={comicWidth}
-                height={comicHeight}
-              />
+            {comicPage.map((item, index) => (
+              <ComicPanel key={`cut-${phase}-${index}`} cut={item} width={panel} height={panel} />
             ))}
           </View>
         ) : null}
 
-        {phase === 'shelf' || phase === 'hand' ? (
+        {phase === 'shelf' ? (
           <View
             className="flex-1 overflow-hidden rounded-[22px] border-[3px]"
-            style={{ borderColor: LINE, backgroundColor: outcome === 'success' ? ACCENT_SOFT : undefined }}
+            style={{ borderColor: LINE, backgroundColor: ACCENT_SOFT }}
           >
-            <Stall
+            <Mart
               width={bodyWidth}
               height={bodyHeight}
               landscape={landscape}
               customer={stage.customer}
-              customerMood="sad"
               items={stage.shelf}
               tried={tried}
               hintItem={hintItem}
-              onPick={phase === 'shelf' ? pick : undefined}
-              handover={phase === 'hand' ? picked : null}
-              entering={phase === 'shelf' && !hasEntered}
+              onPick={pick}
+              entering={!hasEntered}
             />
           </View>
         ) : null}
 
-        {phase === 'use' || phase === 'result' ? (
+        {phase === 'result' && resultCut ? (
           <SceneCut
-            cut={useCut}
+            cut={resultCut}
             width={bodyWidth}
             height={bodyHeight}
             fixed={outcome === 'success'}
-            overlay={phase === 'result' ? renderResultOverlay() : null}
+            overlay={renderResultOverlay()}
           />
         ) : null}
       </View>
