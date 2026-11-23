@@ -18,7 +18,7 @@ const { STAGES, buildPuzzle } = require('../src/games/repairman/game/stages.ts')
 const { piecePolygon } = require('../src/games/repairman/game/shapes.ts');
 const originalCounts = [3, 4, 5, 5, 3, 5, 6, 5, 6, 7, 4, 6, 7, 4, 6, 8, 4, 6, 7, 9];
 assert.equal(STAGES.length, 20);
-for (const size of [{ width: 480, height: 298 }, { width: 658, height: 408 }]) {
+for (const size of [{ width: 480, height: 298 }, { width: 658, height: 408 }, { width: 829, height: 310 }, { width: 1252, height: 568 }]) {
   for (const [index, stage] of STAGES.entries()) {
     assert.equal(stage.parts.length, originalCounts[index]);
     assert.equal(stage.slots, stage.id <= 4);
@@ -39,4 +39,4 @@ for (const size of [{ width: 480, height: 298 }, { width: 658, height: 408 }]) {
     if (stage.dependency) assert(puzzle.pieces.some(piece => piece.requires));
   }
 }
-console.log('PASS: 20 ocean puzzles, 2 sizes, unchanged counts and difficulty flags, valid target/scatter bounds and symmetry');
+console.log('PASS: 20 ocean puzzles, 4 sizes, unchanged counts and difficulty flags, valid target/scatter bounds and symmetry');

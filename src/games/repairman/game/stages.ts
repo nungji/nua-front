@@ -291,7 +291,7 @@ export function stageHint(stage: StageConfig) {
 
 /** Shape specs are authored against a 460px wide board and scaled from there. */
 export function puzzleScale(size: BoardSize): number {
-  return Math.max(0.85, Math.min(1.7, size.width / 460));
+  return Math.max(0.85, Math.min(1.7, size.width / 460, size.height / 300));
 }
 
 export function buildPuzzle(stage: StageConfig, size: BoardSize): Puzzle {
