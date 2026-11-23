@@ -112,13 +112,10 @@ export function GameSelector({ games, onSelect }: Props) {
         />
       ))}
 
-      <View pointerEvents="none" style={{ position: 'absolute', top: -144 * scale, width: 190 * scale, height: 163 * scale, overflow: 'hidden' }}>
-        <Image source={require('../assets/shellstore/customer.png')} resizeMode="contain" style={{ width: 190 * scale, height: 230 * scale }} />
+      {/* Keep the entire mascot outside the animated cards: no crop or moving mask. */}
+      <View testID="selector-mascot" pointerEvents="none" style={{ position: 'absolute', top: -172 * scale, width: 160 * scale, height: 190 * scale, zIndex: 10, overflow: 'visible' }}>
+        <Image source={require('../assets/shellstore/customer.png')} resizeMode="contain" style={{ width: '100%', height: '100%' }} />
       </View>
-      <Svg pointerEvents="none" width={activeSize} height={38 * scale} viewBox="0 0 249 38" style={{ position: 'absolute', top: -8 * scale }}>
-        <Ellipse cx="71" cy="20" rx="19" ry="10" transform="rotate(-20 71 20)" fill="#12BFF1" stroke="#D9FCFF" strokeWidth="3" />
-        <Ellipse cx="178" cy="20" rx="19" ry="10" transform="rotate(20 178 20)" fill="#12BFF1" stroke="#D9FCFF" strokeWidth="3" />
-      </Svg>
 
       <Text
         pointerEvents="none"
