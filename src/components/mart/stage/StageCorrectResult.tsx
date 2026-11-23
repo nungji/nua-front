@@ -1,6 +1,7 @@
 import { Image, Text, View } from 'react-native';
 import { OceanNextButton } from '../OceanCircleButton';
 import { OceanBigStar, OceanProgressPill } from '../OceanDecor';
+import { FONT } from '@/theme';
 
 interface StageCorrectResultProps {
   word: string;
@@ -37,10 +38,11 @@ export function StageCorrectResult({ word, onNext }: StageCorrectResultProps) {
             alignItems: 'center',
           }}
         >
-          <Text style={{ fontSize: 34, fontWeight: '800', color: '#1B3A6B' }}>{word}</Text>
+          <Text style={{ fontSize: 34, fontFamily: FONT, color: '#1B3A6B' }}>{word}</Text>
         </View>
 
-        <Image source={NUA_MASCOT} resizeMode="contain" style={{ width: 220, height: 220 }} />
+        {/* 화면 높이가 모자라면 마스코트가 줄어들어 아래 버튼이 잘리지 않게 한다. */}
+        <Image source={NUA_MASCOT} resizeMode="contain" style={{ flexShrink: 1, width: 220, height: 220, maxHeight: 220, minHeight: 80 }} />
 
         <OceanNextButton onPress={onNext} />
       </View>
