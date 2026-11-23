@@ -21,7 +21,7 @@ export function Shell({ size = 48 }: { size?: number }) {
   </Svg>;
 }
 
-export function ShellPack({ count, width = 94, height = 58, badge = true }: { count: number; width?: number; height?: number; badge?: boolean }) {
+export function ShellPack({ count, width = 94, height = 58, badge = false }: { count: number; width?: number; height?: number; badge?: boolean }) {
   const n = Math.max(0, count);
   const rows = Math.ceil(n / 5);
   const size = Math.min(48, width / (Math.min(Math.max(n, 1), 5) * .62 + .38), (height - (badge ? 15 : 0)) / (1 + .58 * Math.max(0, rows - 1)));
