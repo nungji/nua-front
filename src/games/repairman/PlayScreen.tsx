@@ -1,3 +1,4 @@
+import { GameCharacter } from '@/components/GameCharacter';
 import { CompletedModel } from './CompletedModel';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, Text, useWindowDimensions, View } from 'react-native';
@@ -389,9 +390,12 @@ function PlayRound({ stageId, onExit, onRestart }: PlayScreenProps & { onRestart
           title={`${stage.id}. ${puzzle.stageName}`}
           onBack={onExit}
           right={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 * scale }}>
+            <GameCharacter game="repairman" width={72 * scale} height={72 * scale} />
             <Pressable onPress={() => { reset(); onRestart(); }} hitSlop={8} accessibilityRole="button" accessibilityLabel="다시" style={styles.resetButton}>
               <Text style={styles.resetText}>다시</Text>
             </Pressable>
+            </View>
           }
         />
 

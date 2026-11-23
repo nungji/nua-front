@@ -10,7 +10,7 @@ interface StageRewardProps {
   cornerCleared: boolean;
 }
 
-const NUA_MASCOT = require('../../../assets/mart/nua-mascot.png');
+const NUA_MASCOT = require('../../../assets/characters/mart.png');
 
 export function StageReward({ word, cornerCleared }: StageRewardProps) {
   const { go, back } = useStageRouter();

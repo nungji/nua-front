@@ -6,7 +6,7 @@ export const ART = {
   logo: require('../../assets/shellstore/logo.png'),
   ocean: require('../../assets/shellstore/ocean.png'),
   cashier: require('../../assets/shellstore/cashier.png'),
-  customer: require('../../assets/shellstore/customer.png'),
+  customer: require('../../assets/characters/shell.png'),
 };
 
 /** Independent, state-driven graphics recreated from the flattened Figma artwork. */

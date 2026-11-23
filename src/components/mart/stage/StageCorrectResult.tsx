@@ -12,7 +12,7 @@ interface StageCorrectResultProps {
 const STEP_INDEX = 4;
 const STEP_COUNT = 5;
 
-const NUA_MASCOT = require('../../../assets/mart/nua-mascot.png');
+const NUA_MASCOT = require('../../../assets/characters/mart.png');
 
 export function StageCorrectResult({ word, onNext }: StageCorrectResultProps) {
   return (

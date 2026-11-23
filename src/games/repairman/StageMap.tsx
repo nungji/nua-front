@@ -1,3 +1,4 @@
+import { GameCharacter } from '@/components/GameCharacter';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
@@ -72,7 +73,7 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
       <StageBackdrop dim={0.06} />
 
       <SafeAreaView className="flex-1" edges={['top']}>
-        <TopBar title="수리공" onBack={onExit} />
+        <TopBar title="수리공" onBack={onExit} right={<GameCharacter game="repairman" width={72 * scale} height={72 * scale} />} />
 
       <View style={styles.mapPanel}>
         <ScrollView

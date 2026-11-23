@@ -11,7 +11,7 @@ import { MART_CORNER_ORDER } from '@/enums';
 import { useMartStore } from '@/store/useMartStore';
 import { FONT } from '@/theme';
 
-const NUA_MASCOT = require('../../../assets/mart/nua-mascot.png');
+const NUA_MASCOT = require('../../../assets/characters/mart.png');
 
 export default function MartMap() {
   const { go } = useStageRouter();

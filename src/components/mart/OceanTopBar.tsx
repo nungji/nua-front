@@ -1,4 +1,5 @@
 import Svg, { Path } from 'react-native-svg';
+import { GameCharacter } from '@/components/GameCharacter';
 import { TopBar, TopBarButton } from '@/components/TopBar';
 import { useStageRouter } from '@/hooks/useStageRouter';
 import { COLORS } from '@/theme';
@@ -18,6 +19,7 @@ export function OceanTopBar({ title, onBack, onPressWordbook }: OceanTopBarProps
     <TopBar
       title={title ?? '마트'}
       onBack={onBack ?? back}
+      leading={<GameCharacter game="mart" width={52} height={56} />}
       right={
         onPressWordbook ? (
           <TopBarButton onPress={onPressWordbook} label="단어장">
