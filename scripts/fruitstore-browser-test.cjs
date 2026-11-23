@@ -76,6 +76,7 @@ const assert = require('node:assert/strict');
       const count = customer === 1 ? 6 : customer === 2 ? 3 : customer === 3 ? 7 : 5;
       await button('계산대로 이동').click(); await button(`조개 ${count}개 건네주기`).click();
       if (customer === 1) {
+        await page.getByTestId('order-feedback-excess').waitFor();
         await button('조개가 많아요. 진열대에서 되돌리기').click();
         await drag(basket(6), [[80,465]]);
         await button('선택한 바닥 묶음에서 조개 하나 떼기').click();
@@ -83,10 +84,12 @@ const assert = require('node:assert/strict');
         await button('선택한 바닥 묶음에서 조개 하나 떼기').click();
         await drag(floor(1,4), [[130,660]]); // extra stays on floor
       } else if (customer === 2) {
+        await page.getByTestId('order-feedback-short').waitFor();
         await button('조개가 모자라요. 진열대에서 더 담기').click(); await put(8,3);
       }
       if (customer === 1 || customer === 2) { await button('계산대로 이동').click(); await button(`조개 ${target}개 건네주기`).click(); }
       await screen(24);
+      await page.getByTestId('order-feedback-correct').waitFor();
       await button(customer === 3 ? '오늘 장사 마치기' : '다음 손님 맞이하기').click();
       console.log(`Customer ${customer+1} passed`);
     }
