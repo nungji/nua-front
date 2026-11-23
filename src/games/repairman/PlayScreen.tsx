@@ -279,7 +279,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
         return;
       }
 
-      if (stage.rotate && !isFixed(piece)) {
+      if (stage.rotate) {
         rotate(piece.id);
       }
     },
@@ -294,7 +294,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
         return;
       }
 
-      if (stage.flip && !isFixed(piece)) {
+      if (stage.flip) {
         flip(piece.id);
       }
     },
@@ -302,7 +302,8 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   );
 
   const pan = Gesture.Pan()
-    .onBegin((event) => {
+    .minDistance(8)
+    .onStart((event) => {
       const values = hits.value;
       const index = pickPiece(values, shapes, sizes, event.x, event.y);
 
@@ -367,7 +368,8 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
 
   const tap = Gesture.Tap()
     .maxDuration(190)
-    .onEnd((event) => {
+    .onEnd((event, success) => {
+      if (!success) return;
       const index = pickPiece(hits.value, shapes, sizes, event.x, event.y);
 
       if (index >= 0) {
@@ -375,7 +377,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       }
     });
 
-  const gesture = Gesture.Exclusive(pan, longPress, tap);
+  const gesture = stage.flip ? Gesture.Exclusive(pan, longPress, tap) : Gesture.Exclusive(pan, tap);
 
   return (
     <View className="flex-1" style={{ backgroundColor: COLORS.oceanDeep }}>
@@ -499,10 +501,6 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       </SafeAreaView>
     </View>
   );
-}
-
-function isFixed(piece: Piece) {
-  return piece.symmetry.every(Boolean);
 }
 
 function Hint({ piece }: { piece: Piece }) {
