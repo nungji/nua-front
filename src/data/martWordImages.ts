@@ -67,3 +67,13 @@ const MART_WORD_IMAGES: Record<string, ImageSourcePropType> = {
 export function getMartWordImage(word: string): ImageSourcePropType | undefined {
   return MART_WORD_IMAGES[word];
 }
+
+// 피그마에서 가져온 아이콘. 자체 배경 타일이 그려져 있어 흰 타일 안에 작게 넣지 않고 타일 크기 그대로 보여준다.
+const FIGMA_ICON_WORDS: ReadonlySet<string> = new Set([
+  '두부', '자두', '요거트', '김치', '치마', '세제', '베개', '기저귀', '치약', '수건',
+  '스피커', '다리미', '드라이기', '밥솥', '리모컨', '선풍기', '냉장고', '세탁기', '청소기',
+]);
+
+export function hasOwnIconBackground(word: string): boolean {
+  return FIGMA_ICON_WORDS.has(word);
+}

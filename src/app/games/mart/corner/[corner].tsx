@@ -6,10 +6,11 @@ import { MartIcon } from '@/components/mart/MartIcon';
 import { MART_AWNING_COLORS, MartShelfPlank, MartStall } from '@/components/mart/MartStall';
 import { OceanBackground } from '@/components/mart/OceanBackground';
 import { OceanTopBar } from '@/components/mart/OceanTopBar';
-import { getMartWordImage } from '@/data/martWordImages';
+import { getMartWordImage, hasOwnIconBackground } from '@/data/martWordImages';
 import { isRowUnlocked, MART_CORNERS } from '@/data/martWords';
 import type { MartCornerId } from '@/enums';
 import { useMartStore } from '@/store/useMartStore';
+import { FONT } from '@/theme';
 
 const STALLS_PER_ROW = 2;
 const SCREEN_PADDING = 12;
@@ -90,7 +91,11 @@ export default function MartCornerScreen() {
               <Image
                 source={wordImage}
                 resizeMode="contain"
-                style={{ width: productHeight * 0.75, height: productHeight * 0.75 }}
+                style={
+                  hasOwnIconBackground(word)
+                    ? { width: productHeight, height: productHeight, borderRadius: 20 }
+                    : { width: productHeight * 0.75, height: productHeight * 0.75 }
+                }
               />
             </View>
           ) : (
@@ -128,7 +133,7 @@ export default function MartCornerScreen() {
           >
             <Text
               numberOfLines={1}
-              style={{ fontSize: 22, fontWeight: '800', color: '#1B3A6B' }}
+              style={{ fontSize: 22, fontFamily: FONT, color: '#1B3A6B' }}
             >
               {completed ? word : '?'}
             </Text>
