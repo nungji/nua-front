@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { Image, StyleSheet, View } from 'react-native';
+import { Image, View } from 'react-native';
 
 // Metro의 asset require()는 @/* 별칭을 해석하지 못하므로 상대 경로를 쓴다.
 const OCEAN_BG = require('../../assets/mart/ocean-background.png');
@@ -14,7 +14,12 @@ interface OceanBackgroundProps {
 export function OceanBackground({ children, style }: OceanBackgroundProps) {
   return (
     <View style={[{ flex: 1 }, style]}>
-      <Image source={OCEAN_BG} resizeMode="cover" style={StyleSheet.absoluteFill} />
+      {/* absoluteFill(top/bottom 0)만 쓰면 화면을 돌렸을 때 이미지 높이가 갱신되지 않아 아래가 비므로 크기를 명시한다. */}
+      <Image
+        source={OCEAN_BG}
+        resizeMode="cover"
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+      />
       {children}
     </View>
   );
