@@ -13,20 +13,30 @@ export type Correction = 'excess' | 'short' | null;
 export type State = {
   screen: number;
   selected: number[];
+  floor: number[][];
   completed: number;
   coins: number;
   correction: Correction;
 };
 export type Action =
   | { type: 'advance'; fromScreen: number }
-  | { type: 'pick'; fruit: number }
-  | { type: 'pick-pack'; pack: number }
-  | { type: 'remove' }
+  | { type: 'stage-pack'; pack: number; slot: number }
+  | { type: 'move-floor'; from: number; to: number }
+  | { type: 'basket-floor'; slot: number }
+  | { type: 'split-floor'; slot: number }
+  | { type: 'return-floor'; slot: number }
+  | { type: 'unbasket'; slot: number }
   | { type: 'counter' }
   | { type: 'shelf' }
   | { type: 'restart' };
 
-export const initialState: State = { screen: 0, selected: [], completed: 0, coins: 0, correction: null };
+export const emptyFloor = (): number[][] => Array.from({ length: 6 }, () => []);
+export const initialState: State = { screen: 0, selected: [], floor: emptyFloor(), completed: 0, coins: 0, correction: null };
+export const availablePack = (state: State, pack: number) => {
+  const occupied = new Set([...state.selected, ...state.floor.flat()]);
+  return packShells(pack).filter(id => !occupied.has(id));
+};
+const validSlot = (slot: number) => Number.isInteger(slot) && slot >= 0 && slot < 6;
 export const isShelf = (screen: number) => [7, 8, 9, 10, 16, 17, 20, 21].includes(screen);
 export const isSuccess = (screen: number) => [14, 18, 22].includes(screen);
 
@@ -39,23 +49,42 @@ function shelfScreen(count: number, correction: Correction) {
 
 /** All rewards and quantities are driven by the game, never by presentation timers. */
 export function gameReducer(state: State, action: Action): State {
-  if (action.type === 'restart') return { ...initialState, selected: [] };
-  if (action.type === 'pick-pack') {
+  if (action.type === 'restart') return { ...initialState, selected: [], floor: emptyFloor() };
+  if (action.type === 'stage-pack') {
     if (!isShelf(state.screen)) return state;
-    const added = packShells(action.pack).filter(id => !state.selected.includes(id));
+    const slot = action.slot;
+    if (!validSlot(slot)) return state;
+    const added = availablePack(state, action.pack);
     if (added.length === 0) return state;
-    const selected = [...state.selected, ...added];
-    return { ...state, selected, screen: shelfScreen(selected.length, state.correction) };
+    const floor = state.floor.map((group, i) => i === slot ? [...group, ...added] : group);
+    return { ...state, floor };
   }
-  if (action.type === 'pick') {
-    if (!isShelf(state.screen) || !Number.isInteger(action.fruit) || action.fruit < 0 || action.fruit >= STOCK_SIZE || state.selected.includes(action.fruit)) return state;
-    const selected = [...state.selected, action.fruit];
-    return { ...state, selected, screen: shelfScreen(selected.length, state.correction) };
+  if (['move-floor', 'basket-floor', 'split-floor', 'return-floor'].includes(action.type)) {
+    if (!isShelf(state.screen)) return state;
+    const slot = action.type === 'move-floor' ? action.from : 'slot' in action ? action.slot : -1;
+    if (!validSlot(slot) || state.floor[slot].length === 0) return state;
+    const floor = state.floor.map(group => [...group]);
+    if (action.type === 'move-floor') {
+      if (!validSlot(action.to) || action.to === slot) return state;
+      floor[action.to].push(...floor[slot]);
+      floor[slot] = [];
+    } else if (action.type === 'basket-floor') {
+      const selected = [...state.selected, ...floor[slot]];
+      floor[slot] = [];
+      return { ...state, floor, selected, screen: shelfScreen(selected.length, state.correction) };
+    } else if (action.type === 'split-floor') {
+      const empty = floor.findIndex(group => group.length === 0);
+      if (floor[slot].length < 2 || empty < 0) return state;
+      floor[empty] = [floor[slot].pop()!];
+    } else {
+      floor[slot] = [];
+    }
+    return { ...state, floor };
   }
-  if (action.type === 'remove') {
-    if (!isShelf(state.screen) || state.selected.length === 0) return state;
-    const selected = state.selected.slice(0, -1);
-    return { ...state, selected, screen: shelfScreen(selected.length, state.correction) };
+  if (action.type === 'unbasket') {
+    if (!isShelf(state.screen) || state.selected.length === 0 || !validSlot(action.slot)) return state;
+    const floor = state.floor.map((group, i) => i === action.slot ? [...group, ...state.selected] : group);
+    return { ...state, selected: [], floor, screen: shelfScreen(0, state.correction) };
   }
   if (action.type === 'counter') return isShelf(state.screen) && state.selected.length > 0 ? { ...state, screen: 11 } : state;
   if (action.type === 'shelf') {
@@ -73,7 +102,7 @@ export function gameReducer(state: State, action: Action): State {
     return { ...state, screen };
   }
   if (isSuccess(state.screen)) return { ...state, screen: 23, completed: state.completed + 1, coins: state.coins + REWARD };
-  if (state.screen === 23) return state.completed === CUSTOMER_COUNT ? { ...state, screen: 24 } : { ...state, screen: 0, selected: [], correction: null };
+  if (state.screen === 23) return state.completed === CUSTOMER_COUNT ? { ...state, screen: 24 } : { ...state, screen: 0, selected: [], floor: emptyFloor(), correction: null };
   if (state.screen === 24) return { ...state, screen: 25 };
   return state;
 }

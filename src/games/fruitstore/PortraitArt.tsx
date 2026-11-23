@@ -21,8 +21,20 @@ export function Shell({ size = 48 }: { size?: number }) {
   </Svg>;
 }
 
-export function ShellPack({ count, width = 94, height = 58, badge = false }: { count: number; width?: number; height?: number; badge?: boolean }) {
+export function ShellPack({ count, width = 94, height = 58, badge = false, separated = false }: { count: number; width?: number; height?: number; badge?: boolean; separated?: boolean }) {
   const n = Math.max(0, count);
+  if (separated) {
+    const columns = Math.min(n, n > 9 ? 5 : 3);
+    const rows = Math.ceil(n / Math.max(1, columns));
+    const size = Math.min(38, width / Math.max(1, columns), height / Math.max(1, rows));
+    return <View pointerEvents="none" style={{ width, height }}>
+      {Array.from({ length: n }, (_, i) => {
+        const row = Math.floor(i / columns);
+        const cells = Math.min(columns, n - row * columns);
+        return <View key={i} style={{ position: 'absolute', left: (width - cells * size) / 2 + (i % columns) * size, top: row * size }}><Shell size={size} /></View>;
+      })}
+    </View>;
+  }
   const rows = Math.ceil(n / 5);
   const size = Math.min(48, width / (Math.min(Math.max(n, 1), 5) * .62 + .38), (height - (badge ? 15 : 0)) / (1 + .58 * Math.max(0, rows - 1)));
   return <View pointerEvents="none" style={{ width, height }}>

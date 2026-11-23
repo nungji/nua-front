@@ -1,12 +1,13 @@
 import { useMemo, useRef, useState } from 'react';
 import { Animated, Image, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import type { ReactNode } from 'react';
 import type { ViewStyle } from 'react-native';
 
-import { CUSTOMER_COUNT, isShelf, isSuccess, ORDER_SIZE, packShells } from './game';
+import { CUSTOMER_COUNT, isShelf, isSuccess, ORDER_SIZE, availablePack } from './game';
 import type { Action, State } from './game';
 import { ART, BasketArt, Character, Coin, CounterArt, GlossyButton, Logo, OutlinedLabel, Register, ShelfArt, Shell, ShellPack } from './PortraitArt';
 import { PORTRAIT, PORTRAIT_BASKET, SHELF_SLOTS } from './portraitLayout';
-import { shouldPickFruit, TAP_DISTANCE } from './interaction';
+import { BASKET, SHELF, FLOOR, FLOOR_SLOTS, containsPoint, floorSlotAt, TAP_DISTANCE } from './interaction';
 
 export const COLORS = { background: '#02B6EF', ink: '#143A9F' };
 export const SCREENS = ['손님 도착', '손님 맞이', '주문 받기', '주문서 열기', '주문 확인', '진열대로', '진열대 도착', '조개 고르기', '조개 담기', '주문 수량 완성', '많이 담았어요', '계산대로', '건네주기', '수량 확인', '주문 성공', '많아요', '조개 되돌리기', '수량 수정 완료', '주문 성공', '모자라요', '조개 더 담기', '수량 수정 완료', '주문 성공', '보상', '장사 완료', '오늘의 결과'].map(name => ({ name }));
@@ -32,13 +33,15 @@ function Order({ onPress }: { onPress: () => void }) {
   return <Pressable accessibilityRole="button" accessibilityLabel="주문서 다시 보기" onPress={onPress} style={[at(247, 100, 128, 48), styles.ticket]}><Shell size={38} /><Text style={styles.orderNumber}>×{ORDER_SIZE}</Text><Text style={styles.star}>★</Text></Pressable>;
 }
 
-function DraggablePack({ index, count, scale, pick, onDrag }: { index: number; count: number; scale: number; pick: () => void; onDrag: (quantity: number) => void }) {
-  const slot = SHELF_SLOTS[index];
+function DraggablePack({ rect, label, count, scale, onTap, onDrop, onDrag, selected = false, separated = false, children }: {
+  rect: { x: number; y: number; w: number; h: number }; label: string; count: number; scale: number;
+  onTap: () => void; onDrop: (x: number, y: number) => void; onDrag: (quantity: number) => void; selected?: boolean; separated?: boolean; children?: ReactNode;
+}) {
   const offset = useRef(new Animated.ValueXY()).current;
   const travel = useRef(0);
   const [dragging, setDragging] = useState(false);
-  const current = useRef({ scale, pick, onDrag, count });
-  current.current = { scale, pick, onDrag, count };
+  const current = useRef({ scale, onTap, onDrop, onDrag, count, rect });
+  current.current = { scale, onTap, onDrop, onDrag, count, rect };
   const responder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
@@ -49,17 +52,20 @@ function DraggablePack({ index, count, scale, pick, onDrag }: { index: number; c
       offset.setValue({ x: g.dx / current.current.scale, y: g.dy / current.current.scale });
     },
     onPanResponderRelease: (_, g) => {
-      const x = slot.x + slot.w / 2 + g.dx / current.current.scale;
-      const y = slot.y + slot.h / 2 + g.dy / current.current.scale;
+      const now = current.current;
+      const x = now.rect.x + now.rect.w / 2 + g.dx / now.scale;
+      const y = now.rect.y + now.rect.h / 2 + g.dy / now.scale;
       const distance = Math.max(travel.current, Math.abs(g.dx) + Math.abs(g.dy));
-      setDragging(false); current.current.onDrag(0);
-      if (shouldPickFruit(x, y, distance)) current.current.pick();
+      setDragging(false); now.onDrag(0);
+      // A drag returning to its origin is a cancellation, never an activation.
+      if (distance <= TAP_DISTANCE) now.onTap();
+      else if (Math.abs(g.dx) + Math.abs(g.dy) > TAP_DISTANCE) now.onDrop(x, y);
       Animated.spring(offset, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
     },
     onPanResponderTerminate: () => { setDragging(false); current.current.onDrag(0); offset.setValue({ x: 0, y: 0 }); },
-  }), [offset, slot]);
-  const keyboard = Platform.OS === 'web' ? { tabIndex: 0 as const, onKeyDown: (e: { key: string; preventDefault: () => void }) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } } } : {};
-  return <Animated.View {...responder.panHandlers} {...keyboard} accessible accessibilityRole="button" accessibilityLabel={`조개 묶음 ${index + 1}, ${count}개 담기`} accessibilityHint="누르거나 아래 바구니로 끌어 주세요" accessibilityActions={[{ name: 'activate' }]} onAccessibilityAction={pick} onAccessibilityTap={pick} style={[at(slot.x, slot.y, slot.w, slot.h), { zIndex: dragging ? 50 : 5, transform: offset.getTranslateTransform() }]}><ShellPack count={count} width={slot.w} height={slot.h} /></Animated.View>;
+  }), [offset]);
+  const keyboard = Platform.OS === 'web' ? { tabIndex: 0 as const, onKeyDown: (e: { key: string; preventDefault: () => void }) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap(); } } } : {};
+  return <Animated.View {...responder.panHandlers} {...keyboard} accessible accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected }} accessibilityHint="원하는 자리로 끌어서 놓아 주세요" accessibilityActions={[{ name: 'activate' }]} onAccessibilityAction={onTap} onAccessibilityTap={onTap} style={[at(rect.x, rect.y, rect.w, rect.h), selected && styles.selectedPack, { zIndex: dragging ? 50 : 5, transform: offset.getTranslateTransform() }]}>{children ?? <ShellPack count={count} width={rect.w} height={rect.h} separated={separated} />}</Animated.View>;
 }
 
 function Welcome({ onStart, onExit }: { onStart: () => void; onExit: () => void }) {
@@ -79,7 +85,9 @@ function Welcome({ onStart, onExit }: { onStart: () => void; onExit: () => void 
 export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrder, welcome = false, onStart = () => {} }: {
   state: State; scale: number; preview: boolean; dispatch: (action: Action) => void; onExit: () => void; onOrder: () => void; welcome?: boolean; onStart?: () => void;
 }) {
-  const [dragCount, setDragCount] = useState(0);
+  const [dragSource, setDragSource] = useState<'shelf' | 'floor' | 'basket' | null>(null);
+  const [chosenSlot, setChosenSlot] = useState<number | null>(null);
+  const chosen = chosenSlot !== null && state.floor[chosenSlot].length > 0 ? chosenSlot : null;
   const shelf = isShelf(state.screen);
   const count = state.selected.length;
   const correction = [15, 19].includes(state.screen);
@@ -94,14 +102,31 @@ export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrd
       {shelf ? <>
         <Order onPress={onOrder} />
         <View pointerEvents="none" style={at(15, 147)}><ShelfArt /></View>
-        <View pointerEvents="none" style={at(164, 508)}><Character kind="cashier" width={203} height={172} /></View>
+        <View pointerEvents="none" style={at(225, 558)}><Character kind="cashier" width={145} height={121} /></View>
         <View pointerEvents="none" style={at(70, 663)}><CounterArt width={310} height={116} /></View>
         <View pointerEvents="none" style={at(303, 616)}><Register /></View>
-        <Pressable accessibilityRole="button" accessibilityLabel={`바구니 ${count}개, 눌러서 한 개 되돌리기`} onPress={() => dispatch({ type: 'remove' })} style={[at(x, y, w, h), dragCount > 0 && styles.dropTarget]}><BasketArt count={count} /></Pressable>
-        <View pointerEvents="none" style={[at(150, 596), styles.quantityBubble]}><Text style={styles.quantityText}>{count}</Text></View>
-        {dragCount > 0 ? <View pointerEvents="none" style={[at(92, 439, 206, 92), styles.dragHint]}><Text style={styles.hintText}>바구니에 쏙!</Text><Text style={styles.hintSub}>조개 {dragCount}개</Text></View> : <View pointerEvents="none" style={at(70, 451, 250, 64)}><Text style={styles.hintText}>{count === ORDER_SIZE ? '다 담았어요!' : '조개를 바구니에 담아 주세요'}</Text><Text style={styles.hintSub}>{count > 0 ? '바구니를 누르면 하나씩 돌아가요' : '누르거나 아래로 끌어 주세요'}</Text></View>}
+        {count > 0 ? <DraggablePack rect={BASKET} label={`바구니 조개 ${count}개 꺼내기`} count={count} scale={scale} onTap={() => {}} onDrag={n => setDragSource(n ? 'basket' : null)} onDrop={(dropX, dropY) => { const target = floorSlotAt(dropX, dropY); if (target !== null) { dispatch({ type: 'unbasket', slot: target }); setChosenSlot(target); } }}><BasketArt count={count} /></DraggablePack> : <View testID="empty-shell-basket" style={at(x, y, w, h)}><BasketArt count={0} /></View>}
+        {dragSource === 'floor' && <View pointerEvents="none" style={[at(x, y, w, h), styles.dropTarget]} />}
+
+        <Text pointerEvents="none" style={[at(20, 408, 350, 18), styles.floorInstruction]}>{dragSource === 'shelf' ? '먼저 모래 위에 놓아 주세요' : dragSource === 'floor' ? '겹쳐서 합치거나 바구니로 옮겨요' : state.floor.every(group => group.length > 0) ? '묶음을 합치거나 바구니로 옮겨 주세요' : '바닥에서 조개를 합쳐 보세요'}</Text>
+        <View pointerEvents="none" style={[at(FLOOR.x, FLOOR.y, FLOOR.w, FLOOR.h), styles.floorArea, (dragSource === 'shelf' || dragSource === 'basket') && styles.floorActive]} />
+        {FLOOR_SLOTS.map((slot, index) => <View key={`spot-${index}`} pointerEvents="none" style={[at(slot.x, slot.y, slot.w, slot.h), styles.floorSpot]} />)}
+        {state.floor.map((group, index) => group.length > 0 && <DraggablePack key={`floor-${index}`} rect={FLOOR_SLOTS[index]} separated label={`바닥 조개 묶음 ${index + 1}, ${group.length}개 선택`} count={group.length} scale={scale} selected={chosen === index} onDrag={n => setDragSource(n ? 'floor' : null)} onTap={() => {
+          setChosenSlot(chosen === index ? null : index);
+        }} onDrop={(dropX, dropY) => {
+          if (containsPoint(BASKET, dropX, dropY)) { dispatch({ type: 'basket-floor', slot: index }); setChosenSlot(null); return; }
+          if (containsPoint(SHELF, dropX, dropY)) { dispatch({ type: 'return-floor', slot: index }); setChosenSlot(null); return; }
+          const target = floorSlotAt(dropX, dropY);
+          if (target !== null && target !== index) { dispatch({ type: 'move-floor', from: index, to: target }); setChosenSlot(target); }
+        }} />)}
+        {chosen !== null ? <View style={[at(23, 565, 210, 46), styles.floorTools]}>
+          <Pressable accessibilityRole="button" accessibilityLabel="선택한 바닥 묶음에서 조개 하나 떼기" disabled={state.floor[chosen].length < 2 || !state.floor.some(group => group.length === 0)} accessibilityState={{ disabled: state.floor[chosen].length < 2 || !state.floor.some(group => group.length === 0) }} onPress={() => dispatch({ type: 'split-floor', slot: chosen })} style={[styles.floorTool, (state.floor[chosen].length < 2 || !state.floor.some(group => group.length === 0)) && { opacity: .35 }]}><Text style={styles.toolIcon}>✂</Text><Text style={styles.toolLabel}>떼기</Text></Pressable>
+          <Text pointerEvents="none" style={[styles.floorInstruction, { flex: 1, paddingTop: 5 }]}>겹치면 합쳐져요{'\n'}위로 끌면 진열대로</Text>
+        </View> : <Text pointerEvents="none" style={[at(25, 569, 196, 38), styles.floorInstruction]}>{state.floor.some(group => group.length) ? '묶음을 겹치면 합쳐져요\n묶음을 누르면 나눌 수 있어요' : '진열대에서 바닥으로 끌어 주세요 ↓'}</Text>}
+
         <Button label="계산대로 이동" text="계산대로 ❯" x={75} y={720} w={246} h={79} onPress={() => dispatch({ type: 'counter' })} disabled={count === 0} />
-        {SHELF_SLOTS.map((slot, index) => { const remaining = packShells(index).filter(id => !state.selected.includes(id)).length; return remaining > 0 && <DraggablePack key={index} index={index} count={remaining} scale={scale} onDrag={setDragCount} pick={() => dispatch({ type: 'pick-pack', pack: index })} />; })}
+        {SHELF_SLOTS.map((slot, index) => { const remaining = availablePack(state, index).length; return remaining > 0 && <DraggablePack key={`shelf-${index}`} rect={slot} label={`조개 묶음 ${index + 1}, ${remaining}개 바닥에 놓기`} count={remaining} scale={scale} onDrag={n => setDragSource(n ? 'shelf' : null)} onTap={() => {}} onDrop={(dropX, dropY) => { const target = floorSlotAt(dropX, dropY); if (target !== null) { dispatch({ type: 'stage-pack', pack: index, slot: target }); setChosenSlot(target); } }} />; })}
+
       </> : <>
         <View pointerEvents="none" style={at(-18, 220, 130, 15)}><View style={styles.sideShelf} /></View>
         <View pointerEvents="none" style={at(22, 169)}><Shell size={66} /></View>
@@ -146,12 +171,16 @@ const styles = StyleSheet.create({
   ticket: { backgroundColor: '#FFF4DD', borderWidth: 3, borderColor: 'white', borderRadius: 22, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 0 #75A4F2' },
   star: { position: 'absolute', left: -13, top: -21, color: '#FF87CC', fontSize: 38, textShadowColor: 'white', textShadowRadius: 2, textShadowOffset: { width: 0, height: 0 } },
   orderNumber: { color: '#123D9D', fontSize: 31, fontWeight: '900' },
-  quantityBubble: { width: 44, height: 44, borderRadius: 24, backgroundColor: '#F6FFFF', borderWidth: 3, borderColor: '#1476D8', alignItems: 'center', justifyContent: 'center' },
-  quantityText: { color: '#163C9E', fontSize: 27, fontWeight: '900' },
+  floorInstruction: { textAlign: 'center', color: '#805329', fontWeight: '700', fontSize: 12, lineHeight: 18 },
+  floorArea: { borderWidth: 2, borderColor: '#FFF8DB', borderStyle: 'dashed', borderRadius: 25, backgroundColor: '#FFE5A0' },
+  floorActive: { borderWidth: 3, borderColor: 'white', backgroundColor: '#FFF0B9' },
+  floorSpot: { borderRadius: 22, backgroundColor: '#FFDF8222' },
+  selectedPack: { borderWidth: 2, borderColor: '#00AEEB', borderRadius: 20, backgroundColor: '#FFFCE8AA' },
+  floorTools: { flexDirection: 'row', gap: 7, zIndex: 10 },
+  floorTool: { width: 65, height: 46, borderRadius: 17, backgroundColor: '#ECFEFF', borderWidth: 2, borderColor: 'white', alignItems: 'center', justifyContent: 'center' },
+  toolIcon: { color: '#1274BE', fontSize: 22, fontWeight: '900', lineHeight: 24 },
+  toolLabel: { color: '#16449C', fontSize: 10, fontWeight: '700', lineHeight: 13 },
   dropTarget: { borderRadius: 19, outlineWidth: 3, outlineColor: 'white', outlineStyle: 'dashed', backgroundColor: '#FFFF9955' },
-  dragHint: { borderRadius: 27, borderColor: 'white', borderWidth: 3, borderStyle: 'dashed', justifyContent: 'center' },
-  hintText: { textAlign: 'center', color: '#804F20', fontSize: 17, fontWeight: '800' },
-  hintSub: { textAlign: 'center', color: '#95662D', fontSize: 13, fontWeight: '600', marginTop: 7 },
   sideShelf: { flex: 1, borderRadius: 20, backgroundColor: '#91E63D', borderWidth: 3, borderColor: '#DDFF9F', boxShadow: '0 8px 0 #26BA72' },
   thought: { borderRadius: 47, borderWidth: 3, borderColor: 'white', backgroundColor: '#F5F0FF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 0 #9198F0' },
   thoughtDot: { position: 'absolute', width: 13, height: 13, borderRadius: 10, backgroundColor: 'white', bottom: -23, left: 79 },
