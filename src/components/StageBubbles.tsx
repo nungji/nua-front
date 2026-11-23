@@ -186,6 +186,7 @@ export function StageBubbles() {
 
 const styles = {
   container: {
+    overflow: 'hidden' as const,
     position: 'absolute' as const,
     left: 0,
     right: 0,

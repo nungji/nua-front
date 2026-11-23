@@ -1,3 +1,4 @@
+import { CompletedModel } from './CompletedModel';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -27,6 +28,8 @@ import { Piece } from '@/games/repairman/game/types';
 import { useRepairmanStore } from '@/store/useRepairmanStore';
 import { stageScale } from '@/stage';
 import { COLORS, FONT, SHADOW, TOP_BAR_HEIGHT } from '@/theme';
+
+import { ReefCorners } from './OceanDecor';
 
 const FIXED_STEP = 16.666;
 const FLIP_HOLD = 200;
@@ -376,7 +379,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
 
   return (
     <View className="flex-1" style={{ backgroundColor: COLORS.oceanDeep }}>
-      <StageBackdrop dim={0.18} />
+      <StageBackdrop dim={0.06} />
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <TopBar
@@ -389,21 +392,30 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
           }
         />
 
-      <View className="flex-1 items-center justify-center">
+      <View className="flex-1 items-center justify-center" style={{ flexDirection: 'row', gap: 16 * scale }}>
+        <View testID="repairman-model" style={{ width: size.width * 0.32, height: size.height, backgroundColor: '#E8FDFF', borderRadius: 24, boxShadow: '0 0 0 3px #FFFFFFBB', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontFamily: FONT, color: '#23748F', fontSize: Math.max(13, 20 * scale) }}>이렇게 만들어요</Text>
+          <CompletedModel pieces={pieces} width={size.width * 0.32} height={size.height * 0.7} />
+          <Text style={{ fontFamily: FONT, color: '#23748F', fontSize: Math.max(12, 16 * scale) }}>{puzzle.stageName}</Text>
+        </View>
         <GestureDetector gesture={gesture}>
           <View
-            className="overflow-hidden rounded-3xl bg-slate-50"
+            testID="repairman-workbench"
+            className="overflow-hidden rounded-3xl"
             style={{
               width: size.width,
               height: size.height,
               borderWidth: completed ? 4 : 0,
-              borderColor: '#F05A28'
+              borderColor: '#FFE093',
+              backgroundColor: '#DDF8FA',
+              boxShadow: '0 6px 0 #238DAA, 0 0 0 4px #FFFFFFB3'
             }}
           >
+            <ReefCorners />
             {/* assembly pad — the silhouette target sits on top of the workbench */}
             <View
               pointerEvents="none"
-              style={[styles.zone, { left: size.width * 0.5 + 6, right: 10, top: 10, bottom: 12, backgroundColor: 'rgba(228, 243, 252, 0.9)' }]}
+              style={[styles.zone, { left: size.width * 0.5 + 6, right: 10, top: 10, bottom: 12, backgroundColor: 'rgba(179, 231, 236, 0.65)' }]}
             />
 
             {puzzle.slots
@@ -419,7 +431,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
                   <Path
                     d={puzzle.silhouette}
                     fill="none"
-                    stroke="#94A3B8"
+                    stroke="#59A6B6"
                     strokeWidth={2}
                     strokeDasharray="7 6"
                   />
@@ -440,9 +452,10 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
                 left: puzzle.pedestal.x,
                 top: puzzle.pedestal.y,
                 width: puzzle.pedestal.width,
-                height: puzzle.pedestal.height
+                height: puzzle.pedestal.height,
+                backgroundColor: '#F6D39C'
               }}
-              className="rounded-md bg-slate-300"
+              className="rounded-md"
             />
 
             {pieces.map((piece, index) => (
@@ -466,13 +479,13 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       </View>
 
       <View className="items-center pb-5">
-        <Text className="text-gray-500" style={{ fontSize: Math.max(12, 16 * scale) }}>
+        <Text style={{ color: '#175E80', fontFamily: FONT, fontSize: Math.max(12, 16 * scale) }}>
           놓은 조각 {placedCount}/{pieces.length} · 시도 {snaps + misses}
         </Text>
         {completed ? (
-          <Text className="mt-1 font-bold text-orange-500" style={{ fontSize: Math.max(20, 30 * scale) }}>완성!</Text>
+          <Text className="mt-1" style={{ color: '#FFE18A', fontFamily: FONT, fontSize: Math.max(20, 30 * scale) }}>완성!</Text>
         ) : (
-          <Text className="mt-1 text-gray-400" style={{ fontSize: Math.max(12, 16 * scale) }}>
+          <Text className="mt-1" style={{ color: '#246D87', fontFamily: FONT, fontSize: Math.max(12, 16 * scale) }}>
             {stage.rotate && stage.flip
               ? '탭=돌리기 · 200ms 누르면 뒤집기'
               : stage.rotate
@@ -535,7 +548,7 @@ function Slot({ piece }: { piece: Piece }) {
         top: piece.slot.y - PIECE_PAD
       }}
     >
-      <PieceGraphic piece={piece} edges={piece.edges} fill="none" stroke="#94A3B8" strokeWidth={2} />
+      <PieceGraphic piece={piece} edges={piece.edges} fill="none" stroke="#59A6B6" strokeWidth={2} />
     </View>
   );
 }
@@ -555,12 +568,12 @@ const styles = {
     justifyContent: 'center' as const,
     backgroundColor: COLORS.white,
     borderWidth: 4,
-    borderColor: COLORS.orange,
+    borderColor: '#7FE6E4',
     ...SHADOW.button
   },
   resetText: {
     fontFamily: FONT,
     fontSize: 18,
-    color: COLORS.orangeDeep
+    color: '#168AA7'
   }
 };

@@ -12,6 +12,8 @@ import { COLORS, FONT, SHADOW, withAlpha } from '@/theme';
 import { StageConfig } from '@/games/repairman/game/types';
 import { buildGridLines, buildMapNodes, mapContentHeight, MAP } from '@/games/repairman/game/worldmap';
 
+import { PearlMarker } from './OceanDecor';
+
 const PREVIEW_BOARD = { width: 400, height: 288 };
 const STONE_SIZE = 66;
 
@@ -67,7 +69,7 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
 
   return (
     <View className="flex-1" style={{ backgroundColor: COLORS.oceanDeep }}>
-      <StageBackdrop dim={0.28} />
+      <StageBackdrop dim={0.06} />
 
       <SafeAreaView className="flex-1" edges={['top']}>
         <TopBar title="수리공" onBack={onExit} />
@@ -85,7 +87,7 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
             <Path
               key={`grid-${index}`}
               d={`M${line.from.x},${line.from.y} L${line.to.x},${line.to.y}`}
-              stroke={withAlpha(COLORS.oceanMid, 0.22)}
+              stroke={withAlpha(COLORS.oceanMid, 0)}
               strokeWidth={1}
             />
           ))}
@@ -94,9 +96,9 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
         <Svg width={mapWidth} height={contentHeight} style={{ position: 'absolute', left: mapOffset }}>
           <Path
             d={`M ${path}`}
-            stroke={COLORS.sand}
-            strokeWidth={7}
-            strokeDasharray="2 13"
+            stroke="#C7FAFF"
+            strokeWidth={9}
+            strokeDasharray="1 18"
             strokeLinecap="round"
             fill="none"
           />
@@ -136,19 +138,20 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
                   width: size,
                   height: size,
                   borderRadius: size,
-                  backgroundColor: active ? accent : COLORS.white,
-                  borderWidth: active ? 4 : 3,
+                  backgroundColor: 'transparent',
+                  borderWidth: 0,
                   borderColor: active ? COLORS.white : COLORS.sand,
                   alignItems: 'center',
                   justifyContent: 'center'
                 }}
               >
-                <Text style={{ fontFamily: FONT, fontSize: size * 0.4, color: active ? COLORS.white : COLORS.oceanDeep }}>
+                <PearlMarker size={size} active={active} />
+                <Text style={{ fontFamily: FONT, fontSize: size * 0.35, color: '#176D95' }}>
                   {node.id}
                 </Text>
               </View>
               <Text
-                style={{ position: 'absolute', top: size + 2, fontFamily: FONT, fontSize: 12 * stoneFactor, color: '#60708A' }}
+                style={{ position: 'absolute', top: size + 2, fontFamily: FONT, fontSize: 12 * stoneFactor, color: '#FFFFFF' }}
                 numberOfLines={1}
               >
                 {stageItem.name}
@@ -177,7 +180,7 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
               ]}
             >
               <Svg width={116 * sheetScale} height={136 * sheetScale} viewBox={preview.viewBox}>
-                <Path d={preview.path} fill="#E2E8F0" stroke="#94A3B8" strokeWidth={2} />
+                <Path d={preview.path} fill="#90E2DE" stroke="#39A7B3" strokeWidth={2} />
               </Svg>
             </View>
 
@@ -197,7 +200,7 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
                       height: 8 * sheetScale,
                       flex: 1,
                       borderRadius: 999,
-                      backgroundColor: item.id <= stage.id ? COLORS.orange : '#E2E8F0'
+                      backgroundColor: item.id <= stage.id ? '#FFB5C6' : '#C8ECEE'
                     }}
                   />
                 ))}
@@ -218,7 +221,7 @@ export function StageMap({ accent, onStart, onExit }: StageMapProps) {
                   width: 76 * sheetScale,
                   height: 76 * sheetScale,
                   borderRadius: 38 * sheetScale,
-                  backgroundColor: accent
+                  backgroundColor: '#23BFCB'
                 }
               ]}
             >
@@ -240,28 +243,28 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: COLORS.white,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    backgroundColor: '#E9FCFF',
+    borderTopWidth: 3,
+    borderTopColor: '#FFFFFF',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28
   },
   preview: {
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    backgroundColor: '#F8FAFC'
+    backgroundColor: '#C9F4F3'
   },
   stageTitle: {
     fontFamily: FONT,
-    color: '#1F2937'
+    color: '#17618E'
   },
   stageHint: {
     fontFamily: FONT,
-    color: '#6B7280'
+    color: '#348398'
   },
   difficulty: {
     fontFamily: FONT,
-    color: '#9CA3AF'
+    color: '#498A9A'
   },
   startButton: {
     alignItems: 'center' as const,
@@ -273,6 +276,6 @@ const styles = {
     marginBottom: 8,
     borderRadius: 28,
     overflow: 'hidden' as const,
-    backgroundColor: withAlpha(COLORS.foam, 0.94)
+    backgroundColor: withAlpha(COLORS.foam, 0.12)
   },
 };
