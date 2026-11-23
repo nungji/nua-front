@@ -11,7 +11,7 @@ interface StageCorrectResultProps {
 // 뜻·소리 익히기 6단계 중 마지막("정답").
 const STEP_INDEX = 5;
 
-const NUA_MASCOT = require('../../../assets/mart/nua-mascot.png');
+const NUA_MASCOT = require('../../../assets/characters/mart.png');
 
 export function StageCorrectResult({ word, onNext }: StageCorrectResultProps) {
   return (

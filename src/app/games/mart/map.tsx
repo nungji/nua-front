@@ -9,7 +9,7 @@ import { getCornerWords, MART_CORNERS } from '@/data/martWords';
 import { MART_CORNER_ORDER } from '@/enums';
 import { useMartStore } from '@/store/useMartStore';
 
-const NUA_MASCOT = require('../../../assets/mart/nua-mascot.png');
+const NUA_MASCOT = require('../../../assets/characters/mart.png');
 
 export default function MartMap() {
   const { go } = useStageRouter();

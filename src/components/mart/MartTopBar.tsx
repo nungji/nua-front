@@ -1,3 +1,4 @@
+import { GameCharacter } from '@/components/GameCharacter';
 import { Pressable, Text, View } from 'react-native';
 import { useStageRouter } from '@/hooks/useStageRouter';
 import { MartIcon, type MartIconName } from './MartIcon';
@@ -17,7 +18,7 @@ export function MartTopBar({ title, onBack, rightIcon, onPressRight }: MartTopBa
       <Pressable onPress={onBack ?? back} hitSlop={8} accessibilityLabel="뒤로가기">
         <MartIcon name="back" />
       </Pressable>
-      <Text className="text-base font-bold">{title}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><GameCharacter game="mart" width={52} height={56} /><Text className="text-base font-bold">{title}</Text></View>
       {rightIcon ? (
         <Pressable onPress={onPressRight} hitSlop={8} accessibilityLabel={rightIcon}>
           <MartIcon name={rightIcon} />
