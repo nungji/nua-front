@@ -1,6 +1,7 @@
 import { Image, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { HomeOceanLife } from '@/components/HomeOceanLife';
 import { GameSelector } from '@/components/GameSelector';
 import { StageBackdrop } from '@/components/StageBackdrop';
 import { GAMES } from '@/games';
@@ -16,6 +17,7 @@ export default function SelectorScreen() {
   return (
     <View className="flex-1" style={{ backgroundColor: COLORS.oceanDeep }}>
       <StageBackdrop />
+      <HomeOceanLife />
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
         <View className="flex-1 justify-center">
