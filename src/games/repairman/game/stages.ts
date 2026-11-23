@@ -129,7 +129,8 @@ function autoRequires(pieces: Piece[]) {
         continue;
       }
 
-      if (Math.abs(other.slot.y + other.height - piece.slot.y) > 1) {
+      // y grows downward: the supporting piece starts where this piece ends.
+      if (Math.abs(other.slot.y - (piece.slot.y + piece.height)) > 1) {
         continue;
       }
 
