@@ -1,5 +1,5 @@
 import { CompletedModel } from './CompletedModel';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS, useSharedValue } from 'react-native-reanimated';
@@ -39,19 +39,20 @@ type PlayScreenProps = {
   onExit: () => void;
 };
 
-export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
+export function PlayScreen(props: PlayScreenProps) {
+  const [round, setRound] = useState(0);
+  return <PlayRound key={`${props.stageId}-${round}`} {...props} onRestart={() => setRound(value => value + 1)} />;
+}
+
+function PlayRound({ stageId, onExit, onRestart }: PlayScreenProps & { onRestart: () => void }) {
   const stage = useMemo(() => findStage(stageId), [stageId]);
 
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const scale = stageScale(windowWidth, windowHeight);
   const size = useMemo(() => {
-    const cap = Math.max(480, 760 * Math.min(scale, 1));
-    const availableHeight = windowHeight - (TOP_BAR_HEIGHT + 88) * scale;
-    const width = Math.round(
-      Math.max(320, Math.min(windowWidth - 48 * scale, availableHeight / 0.62, cap))
-    );
-
-    return { width, height: Math.round(width * 0.62) };
+    const width = Math.round(Math.max(320, windowWidth - 32 * scale));
+    const height = Math.round(Math.max(220, windowHeight - (TOP_BAR_HEIGHT + 104) * scale));
+    return { width, height };
   }, [windowWidth, windowHeight, scale]);
 
 
@@ -279,7 +280,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
         return;
       }
 
-      if (stage.rotate && !isFixed(piece)) {
+      if (stage.rotate) {
         rotate(piece.id);
       }
     },
@@ -294,7 +295,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
         return;
       }
 
-      if (stage.flip && !isFixed(piece)) {
+      if (stage.flip) {
         flip(piece.id);
       }
     },
@@ -302,7 +303,8 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
   );
 
   const pan = Gesture.Pan()
-    .onBegin((event) => {
+    .minDistance(8)
+    .onStart((event) => {
       const values = hits.value;
       const index = pickPiece(values, shapes, sizes, event.x, event.y);
 
@@ -367,7 +369,8 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
 
   const tap = Gesture.Tap()
     .maxDuration(190)
-    .onEnd((event) => {
+    .onEnd((event, success) => {
+      if (!success) return;
       const index = pickPiece(hits.value, shapes, sizes, event.x, event.y);
 
       if (index >= 0) {
@@ -375,7 +378,7 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       }
     });
 
-  const gesture = Gesture.Exclusive(pan, longPress, tap);
+  const gesture = stage.flip ? Gesture.Exclusive(pan, longPress, tap) : Gesture.Exclusive(pan, tap);
 
   return (
     <View className="flex-1" style={{ backgroundColor: COLORS.oceanDeep }}>
@@ -386,18 +389,13 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
           title={`${stage.id}. ${puzzle.stageName}`}
           onBack={onExit}
           right={
-            <Pressable onPress={reset} hitSlop={8} accessibilityRole="button" accessibilityLabel="다시" style={styles.resetButton}>
+            <Pressable onPress={() => { reset(); onRestart(); }} hitSlop={8} accessibilityRole="button" accessibilityLabel="다시" style={styles.resetButton}>
               <Text style={styles.resetText}>다시</Text>
             </Pressable>
           }
         />
 
-      <View className="flex-1 items-center justify-center" style={{ flexDirection: 'row', gap: 16 * scale }}>
-        <View testID="repairman-model" style={{ width: size.width * 0.32, height: size.height, backgroundColor: '#E8FDFF', borderRadius: 24, boxShadow: '0 0 0 3px #FFFFFFBB', alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontFamily: FONT, color: '#23748F', fontSize: Math.max(13, 20 * scale) }}>이렇게 만들어요</Text>
-          <CompletedModel pieces={pieces} width={size.width * 0.32} height={size.height * 0.7} />
-          <Text style={{ fontFamily: FONT, color: '#23748F', fontSize: Math.max(12, 16 * scale) }}>{puzzle.stageName}</Text>
-        </View>
+      <View className="flex-1 items-center justify-center" style={{ flexDirection: 'row', gap: 16 * scale, paddingHorizontal: 16 * scale }}>
         <GestureDetector gesture={gesture}>
           <View
             testID="repairman-workbench"
@@ -412,6 +410,13 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
             }}
           >
             <ReefCorners />
+            <View testID="repairman-model" pointerEvents="none" style={{ position: 'absolute', left: 12, top: 12, width: size.width * .47, height: size.height * .6, alignItems: 'center', zIndex: 1 }}>
+              <Text style={{ fontFamily: FONT, color: '#23748F', fontSize: Math.max(13, 20 * scale) }}>이렇게 만들어요</Text>
+              <CompletedModel pieces={pieces} width={size.width * .44} height={size.height * .48} />
+            </View>
+            <View pointerEvents="none" style={{ position: 'absolute', left: 10, top: 10, width: size.width * .48 - 10, bottom: 12, borderRadius: 20, backgroundColor: '#FFF4D8' }}>
+              <Text style={{ fontFamily: FONT, color: '#A77A50', textAlign: 'center', marginTop: size.height * .64, fontSize: 18 * scale }}>조각을 골라요</Text>
+            </View>
             {/* assembly pad — the silhouette target sits on top of the workbench */}
             <View
               pointerEvents="none"
@@ -499,10 +504,6 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
       </SafeAreaView>
     </View>
   );
-}
-
-function isFixed(piece: Piece) {
-  return piece.symmetry.every(Boolean);
 }
 
 function Hint({ piece }: { piece: Piece }) {

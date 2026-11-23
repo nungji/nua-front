@@ -1,3 +1,4 @@
+import { OrderFeedback } from './OrderFeedback';
 import { useMemo, useRef, useState } from 'react';
 import { Animated, Image, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ReactNode } from 'react';
@@ -123,7 +124,8 @@ export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrd
         <View pointerEvents="none" style={at(16, 476)}><CounterArt width={222} height={83} /></View>
         <View pointerEvents="none" style={at(29, 425)}><Register /></View>
         <View pointerEvents="none" style={at(240, 370)}><Character kind="customer" width={142} height={193} /></View>
-        {scene >= 3 && scene < 24 && <View style={[at(177, 231, 185, 100), styles.thought]}><Shell size={52} /><Text style={styles.orderNumber}>×{target}</Text><View style={styles.thoughtDot} /></View>}
+        {scene >= 3 && scene < 24 && !correction && !success && <View style={[at(177, 231, 185, 100), styles.thought]}><Shell size={52} /><Text style={styles.orderNumber}>×{target}</Text><View style={styles.thoughtDot} /></View>}
+        {(correction || success) && <OrderFeedback count={count} target={target} />}
         {scene === 4 && <>
           <View style={[at(55, 580, 280, 64), styles.comparison]}>{Array.from({ length: target }, (_, i) => <Shell key={i} size={Math.min(43, 250 / target)} />)}</View>
           <Button label={`조개 ${target}개 주문 확인`} text="확인 ✓" x={95} y={662} w={200} onPress={advance} />
@@ -135,8 +137,7 @@ export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrd
         </>}
         {(correction || success) && <>
           <View style={[at(54, 571, 282, 76), styles.comparison]}><View><ShellPack count={count} width={73} height={56} /></View><Text style={[styles.equal, { color: correction ? '#FF3157' : '#25B87C' }]}>{correction ? '≠' : '='}</Text><Shell size={44} /><Text style={styles.orderNumber}>×{target}</Text></View>
-          {correction && <><Text style={[styles.feedback, at(40, 646, 310), { marginTop: 0, fontSize: 14 }]}>{count > target ? '조개가 조금 많아요' : '조개를 조금 더 담아 볼까요?'}</Text><Button label={count > target ? '조개가 많아요. 진열대에서 되돌리기' : '조개가 모자라요. 진열대에서 더 담기'} text="⟳" x={100} y={663} w={190} onPress={() => dispatch({ type: 'shelf' })} /></>}
-          {success && scene !== 23 && <Text style={[styles.feedback, at(40, 665, 310)]}>딱 맞아요! 고마워요!</Text>}
+          {correction && <Button label={count > target ? '조개가 많아요. 진열대에서 되돌리기' : '조개가 모자라요. 진열대에서 더 담기'} text="⟳" x={100} y={663} w={190} onPress={() => dispatch({ type: 'shelf' })} />}
         </>}
         {scene === 23 && <><View style={[at(139, 657, 112, 48), styles.reward]}><Coin size={37} /><Text style={styles.orderNumber}>+3</Text></View><Button label={state.completed === CUSTOMER_COUNT ? '오늘 장사 마치기' : '다음 손님 맞이하기'} text={state.completed === CUSTOMER_COUNT ? '오늘 장사 끝 ✓' : '다음 손님 ❯'} x={70} y={725} onPress={advance} /></>}
         {scene < 3 && <Pressable accessibilityRole="button" accessibilityLabel="손님 주문 받기" onPress={advance} style={at(240, 370, 142, 193)} />}
