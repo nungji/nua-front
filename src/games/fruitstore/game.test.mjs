@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { gameReducer, initialState, STOCK_SIZE } from './game.ts';
+import { gameReducer, initialState, STOCK_SIZE, packShells } from './game.ts';
 import { shouldPickFruit } from './interaction.ts';
 
 const advance = state => gameReducer(state, { type: 'advance', fromScreen: state.screen });
@@ -82,14 +82,41 @@ test('a stale transition cannot dismiss the order or advance the next customer',
 });
 
 test('dragging onto the counter button, floor, or above the basket does not pick fruit', () => {
-  assert.equal(shouldPickFruit(760, 325, 700), true);
-  assert.equal(shouldPickFruit(760, 372, 700), false);
-  assert.equal(shouldPickFruit(760, 290, 700), false);
-  assert.equal(shouldPickFruit(840, 325, 700), false);
-  assert.equal(shouldPickFruit(685, 325, 700), false);
+  assert.equal(shouldPickFruit(130, 660, 400), true);
+  assert.equal(shouldPickFruit(130, 755, 400), false);
+  assert.equal(shouldPickFruit(130, 600, 400), false);
+  assert.equal(shouldPickFruit(205, 660, 400), false);
+  assert.equal(shouldPickFruit(60, 660, 400), false);
 });
 
 test('a drag that returns to its starting point is a cancellation, not a tap', () => {
   assert.equal(shouldPickFruit(89, 134, 0), true);
   assert.equal(shouldPickFruit(89, 134, 200), false);
+});
+
+test('packs add the displayed quantity atomically and cannot be added twice', () => {
+  let s = gameReducer(start(), { type: 'pick-pack', pack: 0 });
+  assert.equal(s.selected.length, 2);
+  assert.equal(gameReducer(s, { type: 'pick-pack', pack: 0 }), s);
+  s = gameReducer(s, { type: 'pick-pack', pack: 1 });
+  assert.equal(s.selected.length, 5);
+  assert.equal(s.screen, 9);
+  assert.equal(handOver(s).screen, 14);
+});
+
+test('undo returns one shell to its pack and picking it again does not duplicate stock', () => {
+  let s = gameReducer(start(), { type: 'pick-pack', pack: 3 });
+  assert.equal(s.selected.length, 6);
+  s = gameReducer(s, { type: 'remove' });
+  assert.equal(s.selected.length, 5);
+  assert.equal(packShells(3).filter(id => !s.selected.includes(id)).length, 1);
+  s = gameReducer(s, { type: 'pick-pack', pack: 3 });
+  assert.equal(s.selected.length, 6);
+  assert.equal(new Set(s.selected).size, 6);
+});
+
+test('invalid packs and pack events outside the shelf cannot change a round', () => {
+  const s = start();
+  for (const pack of [-1, 9, 1.5, NaN]) assert.equal(gameReducer(s, { type: 'pick-pack', pack }), s);
+  assert.equal(gameReducer(initialState, { type: 'pick-pack', pack: 0 }), initialState);
 });

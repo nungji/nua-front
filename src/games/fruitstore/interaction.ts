@@ -1,5 +1,5 @@
-/** Shared by the visible basket and drag/drop validation, in 852×393 scene coordinates. */
-export const BASKET = { x: 690, y: 300, w: 146, h: 50 };
+/** Shared by the visible basket and drag/drop validation, in 390×844 scene coordinates. */
+export const BASKET = { x: 68, y: 618, w: 130, h: 94 };
 export const TAP_DISTANCE = 8;
 
 export function shouldPickFruit(x: number, y: number, travel: number): boolean {

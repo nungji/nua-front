@@ -1,199 +1,177 @@
-import { useMemo, useRef } from 'react';
-import { Animated, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import type { TextStyle, ViewStyle } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { Animated, Image, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import type { ViewStyle } from 'react-native';
 
-import designs from './design.json';
-import { CUSTOMER_COUNT, isShelf, isSuccess, ORDER_SIZE } from './game';
+import { CUSTOMER_COUNT, isShelf, isSuccess, ORDER_SIZE, packShells } from './game';
 import type { Action, State } from './game';
-import { OceanBackground } from '@/components/mart/OceanBackground';
-import { OceanShell } from '@/components/mart/OceanShell';
-import { hasOceanArt, OceanLayerArt, OceanPanel, OCEAN } from './oceanTheme';
-import { BASKET, shouldPickFruit, TAP_DISTANCE } from './interaction';
+import { ART, BasketArt, Character, Coin, CounterArt, GlossyButton, Logo, OutlinedLabel, Register, ShelfArt, Shell, ShellPack } from './PortraitArt';
+import { PORTRAIT, PORTRAIT_BASKET, SHELF_SLOTS } from './portraitLayout';
+import { shouldPickFruit, TAP_DISTANCE } from './interaction';
 
-type Layer = {
-  id: string; parent: string; name: string; type: string;
-  x: number; y: number; w: number; h: number;
-  color?: string; fillOpacity?: number; radius?: number; text?: string;
-  fontSize?: number; font?: { family: string; style: string }; align?: string;
-  rotation?: number; opacity?: number; hidden?: boolean;
-  quantity?: number;
-  shadow?: { x: number; y: number; blur: number; alpha: number }[];
-};
-type Design = { id: string; name: string; nodes: Layer[] };
-export const SCREENS = designs as Design[];
-export const COLORS = { background: OCEAN.background, fruit: OCEAN.pink, green: OCEAN.green, orange: '#FF8A3D', pink: OCEAN.pink, ink: OCEAN.ink };
+export const COLORS = { background: '#02B6EF', ink: '#143A9F' };
+export const SCREENS = ['손님 도착', '손님 맞이', '주문 받기', '주문서 열기', '주문 확인', '진열대로', '진열대 도착', '조개 고르기', '조개 담기', '주문 수량 완성', '많이 담았어요', '계산대로', '건네주기', '수량 확인', '주문 성공', '많아요', '조개 되돌리기', '수량 수정 완료', '주문 성공', '모자라요', '조개 더 담기', '수량 수정 완료', '주문 성공', '보상', '장사 완료', '오늘의 결과'].map(name => ({ name }));
+const at = (left: number, top: number, width?: number, height?: number): ViewStyle => ({ position: 'absolute', left, top, width, height });
 
-function layerStyle(node: Layer): ViewStyle {
-  const shadow = node.shadow?.[0];
-  const transparentGroup = !node.color && (node.type === 'FRAME' || node.type === 'GROUP');
-  return {
-    position: 'absolute', left: node.x, top: node.y, width: node.w, height: node.h,
-    backgroundColor: node.type === 'TEXT' || hasOceanArt(node.name) ? undefined : node.color,
-    borderRadius: node.type === 'ELLIPSE' ? Math.max(node.w, node.h) / 2 : node.radius,
-    borderWidth: ['Avatar Pill', 'Ticket', 'Order Card', 'Order Card Sliding', 'Summary Card'].includes(node.name) ? 2.5 : undefined,
-    borderColor: OCEAN.border,
-    opacity: (node.opacity ?? 1) * (node.fillOpacity ?? 1),
-    transform: node.rotation ? [{ rotate: `${-node.rotation}deg` }] : undefined,
-    transformOrigin: 'top left',
-    boxShadow: shadow && !transparentGroup ? `${shadow.x}px ${shadow.y}px ${shadow.blur}px rgba(0,0,0,${shadow.alpha})` : undefined,
-    filter: shadow && transparentGroup && Platform.OS === 'web' ? `drop-shadow(${shadow.x}px ${shadow.y}px ${shadow.blur / 2}px rgba(0,0,0,${shadow.alpha}))` : undefined,
-  };
+function Button({ label, text, onPress, x, y, w = 252, h = 76, yellow = false, disabled = false }: { label: string; text: string; onPress: () => void; x: number; y: number; w?: number; h?: number; yellow?: boolean; disabled?: boolean }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [at(x, y, w, h), { opacity: disabled ? .72 : 1, transform: [{ scale: pressed ? .96 : 1 }] }]}>
+    <View pointerEvents="none"><GlossyButton width={w} height={h} yellow={yellow} /><View style={StyleSheet.absoluteFill}><OutlinedLabel text={text} width={w} height={h - 6} fontSize={text.length > 10 ? 22 : text.length > 7 ? 25 : 30} /></View></View>
+  </Pressable>;
 }
 
-function LayerView({ node, childrenByParent }: { node: Layer; childrenByParent: Map<string, Layer[]> }) {
-  if (node.hidden) return null;
-  if (hasOceanArt(node.name)) {
-    const face = childrenByParent.get(node.id)?.find(child => child.name === 'Customer Face')?.text;
-    return <View style={layerStyle(node)}><OceanLayerArt name={node.name} width={node.w} height={node.h} quantity={node.quantity} unhappy={face === '>_<' || face === '•︿•'} /></View>;
-  }
-  if (node.type === 'TEXT') {
-    const textStyle: TextStyle = {
-      color: node.color, fontSize: node.fontSize,
-      fontWeight: '800',
-      textAlign: node.align === 'LEFT' ? 'left' : node.align === 'RIGHT' ? 'right' : 'center',
-      lineHeight: node.h, includeFontPadding: false,
-    };
-    return <Text selectable={false} style={[layerStyle(node), textStyle]}>{node.text}</Text>;
-  }
-  return <View style={layerStyle(node)}>{childrenByParent.get(node.id)?.map(child => <LayerView key={child.id} node={Platform.OS !== 'web' && node.shadow && child.color && child.type !== 'TEXT' ? { ...child, shadow: child.shadow ?? node.shadow } : child} childrenByParent={childrenByParent} />)}</View>;
+function Header({ state, onExit }: { state: State; onExit: () => void }) {
+  return <>
+    <Button label="게임 선택으로 돌아가기" text="‹" x={10} y={28} w={54} h={54} onPress={onExit} />
+    <View style={[at(69, 28, 309, 49), styles.header]}>
+      {Array.from({ length: CUSTOMER_COUNT }, (_, i) => <View key={i} style={{ opacity: i <= state.completed ? 1 : .24 }}><Character kind="customer" width={35} height={39} />{i < state.completed && <Text style={styles.check}>✓</Text>}</View>)}
+      <View style={styles.divider} /><Coin size={33} /><Text testID="shellstore-coins" style={styles.coinCount}>{state.coins}</Text>
+    </View>
+  </>;
 }
 
-/** A fruit is both tappable and draggable. A cancelled drop never changes stock. */
-function Fruit({ node, index, scale, pick }: { node: Layer; index: number; scale: number; pick: () => void }) {
+function Order({ onPress }: { onPress: () => void }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel="주문서 다시 보기" onPress={onPress} style={[at(247, 100, 128, 48), styles.ticket]}><Shell size={38} /><Text style={styles.orderNumber}>×{ORDER_SIZE}</Text><Text style={styles.star}>★</Text></Pressable>;
+}
+
+function DraggablePack({ index, count, scale, pick, onDrag }: { index: number; count: number; scale: number; pick: () => void; onDrag: (quantity: number) => void }) {
+  const slot = SHELF_SLOTS[index];
   const offset = useRef(new Animated.ValueXY()).current;
   const travel = useRef(0);
-  const current = useRef({ scale, pick, node });
-  current.current = { scale, pick, node };
+  const [dragging, setDragging] = useState(false);
+  const current = useRef({ scale, pick, onDrag, count });
+  current.current = { scale, pick, onDrag, count };
   const responder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
-    onStartShouldSetPanResponderCapture: () => true,
-    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) + Math.abs(g.dy) > TAP_DISTANCE,
-    onPanResponderGrant: () => {
-      travel.current = 0;
-      offset.stopAnimation();
-      offset.setValue({ x: 0, y: 0 });
-    },
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: () => { offset.stopAnimation(); offset.setValue({ x: 0, y: 0 }); travel.current = 0; },
     onPanResponderMove: (_, g) => {
       travel.current = Math.max(travel.current, Math.abs(g.dx) + Math.abs(g.dy));
+      if (travel.current > TAP_DISTANCE) { setDragging(true); current.current.onDrag(current.current.count); }
       offset.setValue({ x: g.dx / current.current.scale, y: g.dy / current.current.scale });
     },
     onPanResponderRelease: (_, g) => {
-      const { node: fruit, scale: zoom, pick: add } = current.current;
-      const x = fruit.x + fruit.w / 2 + g.dx / zoom;
-      const y = fruit.y + fruit.h / 2 + g.dy / zoom;
+      const x = slot.x + slot.w / 2 + g.dx / current.current.scale;
+      const y = slot.y + slot.h / 2 + g.dy / current.current.scale;
       const distance = Math.max(travel.current, Math.abs(g.dx) + Math.abs(g.dy));
-      if (shouldPickFruit(x, y, distance)) add();
+      setDragging(false); current.current.onDrag(0);
+      if (shouldPickFruit(x, y, distance)) current.current.pick();
       Animated.spring(offset, { toValue: { x: 0, y: 0 }, useNativeDriver: false }).start();
     },
-    onPanResponderTerminate: () => offset.setValue({ x: 0, y: 0 }),
-  }), [offset]);
-  const keyboard = Platform.OS === 'web' ? {
-    tabIndex: 0 as const,
-    onKeyDown: (event: { key: string; preventDefault: () => void }) => {
-      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); pick(); }
-    },
-  } : {};
-  return (
-    <Animated.View {...responder.panHandlers} {...keyboard} accessible accessibilityRole="button"
-      accessibilityLabel={`조개 ${index + 1} 담기`} accessibilityHint="누르거나 바구니로 끌어 주세요"
-      accessibilityActions={[{ name: 'activate' }]} onAccessibilityAction={pick} onAccessibilityTap={pick}
-      style={[layerStyle(node), { transform: offset.getTranslateTransform() }]}><OceanShell size={node.w} /></Animated.View>
-  );
+    onPanResponderTerminate: () => { setDragging(false); current.current.onDrag(0); offset.setValue({ x: 0, y: 0 }); },
+  }), [offset, slot]);
+  const keyboard = Platform.OS === 'web' ? { tabIndex: 0 as const, onKeyDown: (e: { key: string; preventDefault: () => void }) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } } } : {};
+  return <Animated.View {...responder.panHandlers} {...keyboard} accessible accessibilityRole="button" accessibilityLabel={`조개 묶음 ${index + 1}, ${count}개 담기`} accessibilityHint="누르거나 아래 바구니로 끌어 주세요" accessibilityActions={[{ name: 'activate' }]} onAccessibilityAction={pick} onAccessibilityTap={pick} style={[at(slot.x, slot.y, slot.w, slot.h), { zIndex: dragging ? 50 : 5, transform: offset.getTranslateTransform() }]}><ShellPack count={count} width={slot.w} height={slot.h} /></Animated.View>;
 }
 
-function Hit({ node, label, onPress }: { node: Layer; label: string; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={{ position: 'absolute', left: node.x, top: node.y, width: node.w, height: Math.max(node.h, 44), borderRadius: 24 }} />;
+function Welcome({ onStart, onExit }: { onStart: () => void; onExit: () => void }) {
+  return <>
+    <View style={at(40, 62)}><Logo /></View>
+    <View style={[at(40, 190, 310, 32), styles.tagline]}><Text style={styles.taglineText}>친구들과 함께 떠나는 신나는 바다 모험!</Text></View>
+    <View style={at(84, 218, 222, 283)}><Character kind="customer" width={222} height={283} /></View>
+    <View style={[at(88, 381, 214, 214), styles.bubble]}><View style={styles.bubbleShine} /><View style={styles.bubbleSand} /><Shell size={119} /><Text style={styles.bubbleStar}>★</Text></View>
+    <Button label="게임 선택으로 돌아가기" text="‹" x={23} y={454} w={50} h={56} onPress={onExit} />
+    <Button label="조개 상점 시작" text="›" x={316} y={454} w={50} h={56} onPress={onStart} />
+    <View style={styles.dots}><View style={styles.dot} /><View style={[styles.dot, { backgroundColor: '#FFD324' }]} /><View style={styles.dot} /></View>
+    <Button label="게임으로 들어가기" text="게임으로 들어가기 ▷" x={41} y={630} w={308} h={84} yellow onPress={onStart} />
+    <Text style={styles.welcomeLabel}>조개 상점</Text>
+  </>;
 }
 
-export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrder }: {
-  state: State; scale: number; preview: boolean; dispatch: (action: Action) => void; onExit: () => void; onOrder: () => void;
+export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrder, welcome = false, onStart = () => {} }: {
+  state: State; scale: number; preview: boolean; dispatch: (action: Action) => void; onExit: () => void; onOrder: () => void; welcome?: boolean; onStart?: () => void;
 }) {
-  const design = SCREENS[state.screen];
+  const [dragCount, setDragCount] = useState(0);
   const shelf = isShelf(state.screen);
   const count = state.selected.length;
-  const contentLayers = useMemo(() => {
-    if (preview) {
-      const quantity = Number(design.nodes.find(n => n.type === 'TEXT' && n.parent === design.id && /^\d+$/.test(n.text ?? ''))?.text ?? 0);
-      return design.nodes.map(n => n.name === 'Basket' ? { ...n, quantity } : n);
-    }
-    const avatar = design.nodes.find(n => n.name === 'Avatar Pill');
-    const badge = design.nodes.find(n => n.name === 'Count Badge');
-    const dots = design.nodes.filter(n => n.parent === avatar?.id && n.type === 'ELLIPSE' && n.w === 28);
-    const comparisonDots = design.nodes.filter(n => n.name === 'Dot');
-    const shownCompleted = state.completed + (isSuccess(state.screen) ? 1 : 0);
-    return design.nodes.filter(n => n.name !== 'Lifted Fruit' && (!shelf || n.name !== 'Fruit On Shelf')).map(n => {
-      if (n.type === 'TEXT' && n.parent === avatar?.id) return { ...n, text: String(state.coins) };
-      const dot = dots.indexOf(n);
-      if (dot >= 0) return { ...n, color: dot < shownCompleted ? COLORS.green : dot === shownCompleted ? '#75b4f1' : '#d9d9de' };
-      if (badge && n.type === 'TEXT' && Math.abs(n.x - badge.x) < 1 && Math.abs(n.y - badge.y) < 1) return { ...n, text: String(count), ...(shelf ? { x: 789, y: 305.5, w: 39, h: 39 } : {}) };
-      if (n.name === 'Basket') return { ...n, ...(shelf ? BASKET : {}), quantity: count };
-      if (shelf && n.name === 'Count Badge') return { ...n, x: 789, y: 305.5, w: 39, h: 39 };
-      if (shelf && (n.name === 'Go To Counter Button' || n.text === '계산대로 ›')) return { ...n, x: 690, y: 350, w: 146, h: 43 };
-      if (state.screen === 19 && n.name === 'Dot') return { ...n, color: comparisonDots.indexOf(n) < count ? COLORS.fruit : '#ffffff' };
-      if (n.name === '01') return { ...n, text: String(state.completed + 1).padStart(2, '0') };
-      if (state.screen === 23 && state.completed === CUSTOMER_COUNT && n.text === '다음 손님 ›') return { ...n, text: '오늘 장사 끝 ›' };
-      return n;
-    });
-  }, [design, preview, shelf, state.screen, state.completed, state.coins, count]);
-  const layers = useMemo(() => contentLayers.map(n => {
-    if (['Floor', 'Chevron', 'Counter Top Stripe', 'Counter Sliver Stripe', 'Cashier Sliver'].includes(n.name)) return { ...n, hidden: true };
-    if (n.name === 'Back Button') return { ...n, x: 10, y: 5, w: 46, h: 46, shadow: undefined };
-    if (n.name.includes('Shelf') && !n.name.includes('Fruit')) return { ...n, color: n.name.includes('Stripe') ? '#D5F3FF' : n.name.includes('Post') ? '#85CFFF' : '#378DD0', radius: 6 };
-    if (n.name === 'Counter Sliver') return { ...n, color: '#2D8CF0', radius: 18 };
-    if (n.name === 'Dimmer') return { ...n, color: '#123A70', fillOpacity: 0.38 };
-    if (n.name === 'Dot') return { ...n, opacity: n.color === '#ffffff' ? 0.2 : 1 };
-    if (n.name === 'Order Number Badge' || n.name === 'Count Badge') return { ...n, color: n.color === '#f4779c' ? '#FF5FA2' : '#2D8CF0' };
-    const parent = contentLayers.find(p => p.id === n.parent);
-    if (parent?.name === 'Avatar Pill' && n.type === 'ELLIPSE' && n.w === 22) return { ...n, name: 'Pearl' };
-    if (n.type === 'TEXT' && n.color !== '#ffffff') return { ...n, color: OCEAN.ink };
-    return n;
-  }), [contentLayers]);
-  const childrenByParent = useMemo(() => {
-    const map = new Map<string, Layer[]>();
-    layers.forEach(n => map.set(n.parent, [...(map.get(n.parent) ?? []), n]));
-    return map;
-  }, [layers]);
-  const find = (name: string) => layers.find(n => n.name === name);
-  const actions: { name: string; label: string; action: () => void }[] = [];
-  if (!preview) {
-    actions.push({ name: 'Back Button', label: '게임 선택으로 돌아가기', action: onExit });
-    if ([0, 1, 2].includes(state.screen)) actions.push({ name: 'Customer Group', label: '손님 주문 받기', action: () => dispatch({ type: 'advance', fromScreen: state.screen }) });
-    if (state.screen === 4) actions.push({ name: 'Confirm Button', label: '조개 5개 주문 확인', action: () => dispatch({ type: 'advance', fromScreen: state.screen }) });
-    if (shelf) {
-      actions.push({ name: 'Basket', label: `바구니 ${count}개, 눌러서 한 개 되돌리기`, action: () => dispatch({ type: 'remove' }) });
-      actions.push({ name: 'Go To Counter Button', label: '계산대로 이동', action: () => dispatch({ type: 'counter' }) });
-    }
-    if (state.screen === 12) actions.push({ name: 'Hand Over Button', label: `조개 ${count}개 건네주기`, action: () => dispatch({ type: 'advance', fromScreen: state.screen }) });
-    if ([15, 19].includes(state.screen)) actions.push({ name: 'Back To Shelf Button', label: count > ORDER_SIZE ? '조개가 많아요. 진열대에서 되돌리기' : '조개가 모자라요. 진열대에서 더 담기', action: () => dispatch({ type: 'shelf' }) });
-    if (state.screen === 23) actions.push({ name: 'Next Customer Button', label: state.completed === CUSTOMER_COUNT ? '오늘 장사 마치기' : '다음 손님 맞이하기', action: () => dispatch({ type: 'advance', fromScreen: state.screen }) });
-    if (state.screen === 24) actions.push({ name: 'End Of Day Button', label: '오늘 장사 결과 보기', action: () => dispatch({ type: 'advance', fromScreen: state.screen }) });
-    if (state.screen === 25) actions.push({ name: 'Back To Shop Button', label: '가게로 돌아가 새로 시작', action: () => dispatch({ type: 'restart' }) });
-    if (find('Ticket') && !isSuccess(state.screen) && ![15, 19].includes(state.screen)) actions.push({ name: 'Ticket', label: '주문서 다시 보기', action: onOrder });
-  }
-  return (
-    <View testID={`fruitstore-screen-${state.screen + 1}`} style={styles.board}>
-      <OceanBackground style={StyleSheet.absoluteFill} imageStyle={{ width: '100%', height: '100%' }} />
-      <View pointerEvents="none" accessible={false} aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
-        {childrenByParent.get(design.id)?.map(n => <LayerView key={n.id} node={n} childrenByParent={childrenByParent} />)}
-      </View>
-      {!preview && shelf && SCREENS[7].nodes.filter(n => n.name === 'Fruit On Shelf').map((n, index) => !state.selected.includes(index) && <Fruit key={n.id} node={n} index={index} scale={scale} pick={() => dispatch({ type: 'pick', fruit: index })} />)}
-      {actions.map(({ name, label, action }) => {
-        const node = find(name);
-        return node ? <Hit key={name} node={node} label={label} onPress={action} /> : null;
-      })}
-      {!preview && shelf && count > 0 && !find('Go To Counter Button') && (
-        <Pressable accessibilityRole="button" accessibilityLabel="계산대로 이동" onPress={() => dispatch({ type: 'counter' })} style={styles.counterButton}>
-          <View pointerEvents="none" style={StyleSheet.absoluteFill}><OceanPanel width={146} height={43} warm /></View><Text style={styles.buttonText}>계산대로 ›</Text>
-        </Pressable>
-      )}
-      {!preview && state.screen === 12 && <Pressable accessibilityRole="button" accessibilityLabel="진열대로 돌아가 수량 바꾸기" onPress={() => dispatch({ type: 'shelf' })} style={styles.shelfReturn}><View pointerEvents="none" style={StyleSheet.absoluteFill}><OceanPanel width={150} height={44} warm /></View><Text style={styles.buttonText}>‹ 진열대로</Text></Pressable>}
-    </View>
-  );
+  const correction = [15, 19].includes(state.screen);
+  const success = isSuccess(state.screen) || state.screen === 23;
+  const advance = () => dispatch({ type: 'advance', fromScreen: state.screen });
+  const scene = state.screen;
+  const { x, y, w, h } = PORTRAIT_BASKET;
+  return <View testID={welcome ? 'shellstore-welcome' : `fruitstore-screen-${scene + 1}`} style={styles.board}>
+    <Image source={ART.ocean} resizeMode="cover" style={styles.background} accessible={false} />
+    {welcome ? <Welcome onStart={onStart} onExit={onExit} /> : <>
+      <Header state={state} onExit={onExit} />
+      {shelf ? <>
+        <Order onPress={onOrder} />
+        <View pointerEvents="none" style={at(15, 147)}><ShelfArt /></View>
+        <View pointerEvents="none" style={at(164, 508)}><Character kind="cashier" width={203} height={172} /></View>
+        <View pointerEvents="none" style={at(70, 663)}><CounterArt width={310} height={116} /></View>
+        <View pointerEvents="none" style={at(303, 616)}><Register /></View>
+        <Pressable accessibilityRole="button" accessibilityLabel={`바구니 ${count}개, 눌러서 한 개 되돌리기`} onPress={() => dispatch({ type: 'remove' })} style={[at(x, y, w, h), dragCount > 0 && styles.dropTarget]}><BasketArt count={count} /></Pressable>
+        <View pointerEvents="none" style={[at(150, 596), styles.quantityBubble]}><Text style={styles.quantityText}>{count}</Text></View>
+        {dragCount > 0 ? <View pointerEvents="none" style={[at(92, 439, 206, 92), styles.dragHint]}><Text style={styles.hintText}>바구니에 쏙!</Text><Text style={styles.hintSub}>조개 {dragCount}개</Text></View> : <View pointerEvents="none" style={at(70, 451, 250, 64)}><Text style={styles.hintText}>{count === ORDER_SIZE ? '다 담았어요!' : '조개를 바구니에 담아 주세요'}</Text><Text style={styles.hintSub}>{count > 0 ? '바구니를 누르면 하나씩 돌아가요' : '누르거나 아래로 끌어 주세요'}</Text></View>}
+        <Button label="계산대로 이동" text="계산대로 ❯" x={75} y={720} w={246} h={79} onPress={() => dispatch({ type: 'counter' })} disabled={count === 0} />
+        {SHELF_SLOTS.map((slot, index) => { const remaining = packShells(index).filter(id => !state.selected.includes(id)).length; return remaining > 0 && <DraggablePack key={index} index={index} count={remaining} scale={scale} onDrag={setDragCount} pick={() => dispatch({ type: 'pick-pack', pack: index })} />; })}
+      </> : <>
+        <View pointerEvents="none" style={at(-18, 220, 130, 15)}><View style={styles.sideShelf} /></View>
+        <View pointerEvents="none" style={at(22, 169)}><Shell size={66} /></View>
+        <View pointerEvents="none" style={at(-18, 311, 130, 15)}><View style={styles.sideShelf} /></View>
+        <View pointerEvents="none" style={at(22, 260)}><Shell size={66} /></View>
+        <View pointerEvents="none" style={at(41, 319)}><Character kind="cashier" width={210} height={172} /></View>
+        <View pointerEvents="none" style={at(16, 476)}><CounterArt width={222} height={83} /></View>
+        <View pointerEvents="none" style={at(29, 425)}><Register /></View>
+        <View pointerEvents="none" style={at(240, 370)}><Character kind="customer" width={142} height={193} /></View>
+        {scene >= 3 && scene < 24 && <View style={[at(177, 231, 185, 100), styles.thought]}><Shell size={52} /><Text style={styles.orderNumber}>×{ORDER_SIZE}</Text><View style={styles.thoughtDot} /></View>}
+        {scene === 4 && <>
+          <View style={[at(55, 580, 280, 64), styles.comparison]}>{Array.from({ length: ORDER_SIZE }, (_, i) => <Shell key={i} size={43} />)}</View>
+          <Button label="조개 5개 주문 확인" text="확인 ✓" x={95} y={662} w={200} onPress={advance} />
+        </>}
+        {scene >= 11 && scene <= 23 && <View pointerEvents="none" style={at(230, 459)}><BasketArt count={count} width={115} height={84} /></View>}
+        {scene === 12 && <>
+          <Button label={`조개 ${count}개 건네주기`} text="건네주기 ❯" x={70} y={647} onPress={advance} />
+          <Pressable accessibilityRole="button" accessibilityLabel="진열대로 돌아가 수량 바꾸기" onPress={() => dispatch({ type: 'shelf' })} style={[at(95, 738, 200, 44), styles.return]}><Text style={styles.returnText}>‹ 진열대로 돌아가기</Text></Pressable>
+        </>}
+        {(correction || success) && <>
+          <View style={[at(54, 571, 282, 76), styles.comparison]}><View><ShellPack count={count} width={73} height={56} /></View><Text style={[styles.equal, { color: correction ? '#FF3157' : '#25B87C' }]}>{correction ? '≠' : '='}</Text><Shell size={44} /><Text style={styles.orderNumber}>×{ORDER_SIZE}</Text></View>
+          {correction && <><Text style={[styles.feedback, at(40, 646, 310), { marginTop: 0, fontSize: 14 }]}>{count > ORDER_SIZE ? '조개가 조금 많아요' : '조개를 조금 더 담아 볼까요?'}</Text><Button label={count > ORDER_SIZE ? '조개가 많아요. 진열대에서 되돌리기' : '조개가 모자라요. 진열대에서 더 담기'} text="⟳" x={100} y={663} w={190} onPress={() => dispatch({ type: 'shelf' })} /></>}
+          {success && scene !== 23 && <Text style={[styles.feedback, at(40, 665, 310)]}>딱 맞아요! 고마워요!</Text>}
+        </>}
+        {scene === 23 && <><View style={[at(139, 657, 112, 48), styles.reward]}><Coin size={37} /><Text style={styles.orderNumber}>+3</Text></View><Button label={state.completed === CUSTOMER_COUNT ? '오늘 장사 마치기' : '다음 손님 맞이하기'} text={state.completed === CUSTOMER_COUNT ? '오늘 장사 끝 ✓' : '다음 손님 ❯'} x={70} y={725} onPress={advance} /></>}
+        {scene < 3 && <Pressable accessibilityRole="button" accessibilityLabel="손님 주문 받기" onPress={advance} style={at(240, 370, 142, 193)} />}
+        {[0, 1, 2, 3, 5, 6, 11, 13].includes(scene) && <Text style={[styles.feedback, at(35, 622, 320)]}>{scene < 4 ? '어서 오세요!' : scene < 7 ? '조개를 골라 볼까요?' : scene === 13 ? '함께 세어 볼까요?' : '손님에게 가져가요'}</Text>}
+        {scene >= 24 && <View style={[at(34, 188, 322, 526), styles.summary]}><Text style={styles.summaryTitle}>오늘 장사 끝!</Text><Character kind="cashier" width={155} height={145} /><Text style={styles.summaryCopy}>친구 {state.completed}명의 주문을 완성했어요</Text><View style={styles.reward}><Coin size={48} /><Text testID="shellstore-total" style={styles.total}>{state.coins}</Text></View><Text style={styles.summaryCopy}>고마워요, 꼬마 점원!</Text><Button label={scene === 24 ? '오늘 장사 결과 보기' : '가게로 돌아가 새로 시작'} text={scene === 24 ? '결과 보기 ❯' : '다시 놀기 ⟳'} x={30} y={420} w={260} yellow onPress={scene === 24 ? advance : () => dispatch({ type: 'restart' })} /></View>}
+      </>}
+    </>}
+    {preview && <View pointerEvents="none" style={StyleSheet.absoluteFill} />}
+  </View>;
 }
 
 const styles = StyleSheet.create({
-  board: { width: 852, height: 393, overflow: 'hidden', backgroundColor: COLORS.background },
-  counterButton: { position: 'absolute', left: 690, top: 350, width: 146, height: 43, backgroundColor: COLORS.green, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
-  shelfReturn: { position: 'absolute', left: 16, top: 340, width: 150, height: 44, backgroundColor: COLORS.green, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
-  buttonText: { fontWeight: '800', fontSize: 16, color: '#fff' },
+  board: { width: PORTRAIT.width, height: PORTRAIT.height, overflow: 'hidden', backgroundColor: COLORS.background },
+  background: { position: 'absolute', width: '100%', height: '100%' },
+  header: { borderWidth: 3, borderColor: 'white', borderRadius: 24, backgroundColor: '#E8FBFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly', boxShadow: '0 4px 0 #298FE4' },
+  check: { position: 'absolute', right: 0, bottom: 0, color: '#04AC8C', fontWeight: '900', fontSize: 17 },
+  divider: { width: 3, height: 29, backgroundColor: '#51D9FA', marginHorizontal: 5, borderRadius: 3 },
+  coinCount: { color: '#142D87', fontWeight: '900', fontSize: 26, minWidth: 30 },
+  ticket: { backgroundColor: '#FFF4DD', borderWidth: 3, borderColor: 'white', borderRadius: 22, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 0 #75A4F2' },
+  star: { position: 'absolute', left: -13, top: -21, color: '#FF87CC', fontSize: 38, textShadowColor: 'white', textShadowRadius: 2, textShadowOffset: { width: 0, height: 0 } },
+  orderNumber: { color: '#123D9D', fontSize: 31, fontWeight: '900' },
+  quantityBubble: { width: 44, height: 44, borderRadius: 24, backgroundColor: '#F6FFFF', borderWidth: 3, borderColor: '#1476D8', alignItems: 'center', justifyContent: 'center' },
+  quantityText: { color: '#163C9E', fontSize: 27, fontWeight: '900' },
+  dropTarget: { borderRadius: 19, outlineWidth: 3, outlineColor: 'white', outlineStyle: 'dashed', backgroundColor: '#FFFF9955' },
+  dragHint: { borderRadius: 27, borderColor: 'white', borderWidth: 3, borderStyle: 'dashed', justifyContent: 'center' },
+  hintText: { textAlign: 'center', color: '#804F20', fontSize: 17, fontWeight: '800' },
+  hintSub: { textAlign: 'center', color: '#95662D', fontSize: 13, fontWeight: '600', marginTop: 7 },
+  sideShelf: { flex: 1, borderRadius: 20, backgroundColor: '#91E63D', borderWidth: 3, borderColor: '#DDFF9F', boxShadow: '0 8px 0 #26BA72' },
+  thought: { borderRadius: 47, borderWidth: 3, borderColor: 'white', backgroundColor: '#F5F0FF', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 0 #9198F0' },
+  thoughtDot: { position: 'absolute', width: 13, height: 13, borderRadius: 10, backgroundColor: 'white', bottom: -23, left: 79 },
+  comparison: { borderRadius: 35, backgroundColor: '#FFFEF1', borderWidth: 3, borderColor: 'white', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 4, boxShadow: '0 4px 0 #F4B976' },
+  equal: { fontSize: 43, fontWeight: '900', marginHorizontal: 2 },
+  feedback: { textAlign: 'center', color: '#733F1A', fontSize: 19, fontWeight: '800', marginTop: 35 },
+  return: { alignItems: 'center', justifyContent: 'center', borderRadius: 22, backgroundColor: '#FFF8DA', borderWidth: 2, borderColor: 'white' },
+  returnText: { color: '#123D9D', fontWeight: '800', fontSize: 15 },
+  reward: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  summary: { backgroundColor: '#F0FCFF', borderRadius: 35, borderWidth: 4, borderColor: 'white', alignItems: 'center', paddingTop: 22, gap: 15, boxShadow: '0 8px 0 #257BD955' },
+  summaryTitle: { fontSize: 32, fontWeight: '900', color: COLORS.ink },
+  summaryCopy: { color: COLORS.ink, fontSize: 16, fontWeight: '700' },
+  total: { color: COLORS.ink, fontSize: 46, fontWeight: '900' },
+  tagline: { backgroundColor: '#DDFBFF', borderRadius: 20, borderWidth: 3, borderColor: 'white', alignItems: 'center', justifyContent: 'center' },
+  taglineText: { color: '#123D9D', fontWeight: '900', fontSize: 13 },
+  bubble: { borderWidth: 6, borderColor: 'white', borderRadius: 110, backgroundColor: '#03D8FA', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', boxShadow: '0 0 0 5px #A9F5FF' },
+  bubbleShine: { position: 'absolute', top: 13, left: 30, width: 58, height: 14, borderRadius: 10, backgroundColor: '#E5FFFF', transform: [{ rotate: '-32deg' }] },
+  bubbleSand: { position: 'absolute', bottom: -25, width: 230, height: 90, backgroundColor: '#FFE087', borderRadius: 100 },
+  bubbleStar: { position: 'absolute', right: 17, bottom: 8, color: '#F371BC', fontSize: 43 },
+  dots: { position: 'absolute', top: 608, alignSelf: 'center', flexDirection: 'row', gap: 12 },
+  dot: { width: 15, height: 15, borderRadius: 10, backgroundColor: '#09D9F1', borderColor: 'white', borderWidth: 2 },
+  welcomeLabel: { position: 'absolute', top: 726, alignSelf: 'center', color: 'white', fontWeight: '800', fontSize: 18 },
 });

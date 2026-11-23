@@ -1,5 +1,11 @@
 export const ORDER_SIZE = 5;
-export const STOCK_SIZE = 11;
+export const SHELL_PACKS = [2, 3, 4, 6, 7, 1, 2, 3, 4] as const;
+export const STOCK_SIZE = SHELL_PACKS.reduce<number>((sum, size) => sum + size, 0);
+export const packShells = (pack: number): number[] => {
+  if (!Number.isInteger(pack) || pack < 0 || pack >= SHELL_PACKS.length) return [];
+  const start = SHELL_PACKS.slice(0, pack).reduce<number>((sum, size) => sum + size, 0);
+  return Array.from({ length: SHELL_PACKS[pack] }, (_, i) => start + i);
+};
 export const CUSTOMER_COUNT = 4;
 export const REWARD = 3;
 
@@ -14,6 +20,7 @@ export type State = {
 export type Action =
   | { type: 'advance'; fromScreen: number }
   | { type: 'pick'; fruit: number }
+  | { type: 'pick-pack'; pack: number }
   | { type: 'remove' }
   | { type: 'counter' }
   | { type: 'shelf' }
@@ -33,6 +40,13 @@ function shelfScreen(count: number, correction: Correction) {
 /** All rewards and quantities are driven by the game, never by presentation timers. */
 export function gameReducer(state: State, action: Action): State {
   if (action.type === 'restart') return { ...initialState, selected: [] };
+  if (action.type === 'pick-pack') {
+    if (!isShelf(state.screen)) return state;
+    const added = packShells(action.pack).filter(id => !state.selected.includes(id));
+    if (added.length === 0) return state;
+    const selected = [...state.selected, ...added];
+    return { ...state, selected, screen: shelfScreen(selected.length, state.correction) };
+  }
   if (action.type === 'pick') {
     if (!isShelf(state.screen) || !Number.isInteger(action.fruit) || action.fruit < 0 || action.fruit >= STOCK_SIZE || state.selected.includes(action.fruit)) return state;
     const selected = [...state.selected, action.fruit];
