@@ -11,4 +11,5 @@ export type Game = {
   accent: string;
   route: string;
   Scene: ComponentType<GameSceneProps>;
+  Icon?: ComponentType<{ size: number }>;
 };

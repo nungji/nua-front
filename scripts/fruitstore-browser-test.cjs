@@ -23,9 +23,12 @@ const assert = require('node:assert/strict');
       // Allow the cancellation spring to settle before starting the next gesture.
       await page.waitForTimeout(700);
     };
-    await page.goto(`${process.env.BASE_URL || 'http://localhost:8082'}/games/fruitstore`);
+    await page.goto(process.env.BASE_URL || 'http://localhost:8082');
+    await button('이전 게임').click();
+    await page.getByText('조개 상점', { exact: true }).waitFor();
+    await button('조개 상점').click();
     for (let customer = 0; customer < 4; customer++) {
-      await button('과일 5개 주문 확인').click();
+      await button('조개 5개 주문 확인').click();
       await screen(8);
       if (customer === 0) {
         // These points used to count as successful drops outside the visible basket.
@@ -42,7 +45,7 @@ const assert = require('node:assert/strict');
         // Reopening the order must trap keyboard focus and hide background controls.
         await button('주문서 다시 보기').click();
         await page.getByRole('dialog').waitFor();
-        assert.equal(await button('과일 1 담기').count(), 0);
+        assert.equal(await button('조개 1 담기').count(), 0);
         for (let i = 0; i < 8; i++) {
           await page.keyboard.press('Tab');
           assert.equal(await page.evaluate(() => !!document.activeElement.closest('[role="dialog"]')), true);
@@ -50,33 +53,33 @@ const assert = require('node:assert/strict');
         await page.keyboard.press('Escape');
         await page.getByRole('dialog').waitFor({ state: 'hidden' });
         await basket(0).waitFor();
-        await button('과일 1 담기').tap();
+        await button('조개 1 담기').tap();
         await basket(1).click();
-        await button('과일 1 담기').focus();
+        await button('조개 1 담기').focus();
         await page.keyboard.press('Enter');
         await basket(1).click();
       }
       const count = customer === 0 ? 6 : customer === 1 ? 3 : 5;
-      for (let fruit = 1; fruit <= count; fruit++) await button(`과일 ${fruit} 담기`).click();
+      for (let fruit = 1; fruit <= count; fruit++) await button(`조개 ${fruit} 담기`).click();
       await button('계산대로 이동').click();
       await screen(13);
-      await button(`과일 ${count}개 건네주기`).click();
+      await button(`조개 ${count}개 건네주기`).click();
       if (customer === 0) {
         await screen(16);
-        await button('과일이 많아요. 진열대에서 되돌리기').click();
+        await button('조개가 많아요. 진열대에서 되돌리기').click();
         await basket(6).click();
         await screen(18);
       } else if (customer === 1) {
         await screen(20);
-        await button('과일이 모자라요. 진열대에서 더 담기').click();
-        await button('과일 4 담기').click();
-        await button('과일 5 담기').click();
+        await button('조개가 모자라요. 진열대에서 더 담기').click();
+        await button('조개 4 담기').click();
+        await button('조개 5 담기').click();
         await screen(22);
       }
       if (customer < 2) {
         await button('계산대로 이동').click();
         await screen(13);
-        await button('과일 5개 건네주기').click();
+        await button('조개 5개 건네주기').click();
       }
       await screen(24);
       await button(customer === 3 ? '오늘 장사 마치기' : '다음 손님 맞이하기').click();
@@ -89,7 +92,7 @@ const assert = require('node:assert/strict');
     await button('가게로 돌아가 새로 시작').click();
     await screen(1);
     assert.deepEqual(errors, []);
-    console.log('PASS: drop bounds, cancelled drag, modal focus, touch, keyboard, corrections, 12 coins, restart');
+    console.log('PASS: home selector entry, drop bounds, cancelled drag, modal focus, touch, keyboard, corrections, 12 coins, restart');
   } finally {
     await browser.close();
   }

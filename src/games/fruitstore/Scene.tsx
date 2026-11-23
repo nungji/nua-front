@@ -5,6 +5,9 @@ import type { TextStyle, ViewStyle } from 'react-native';
 import designs from './design.json';
 import { CUSTOMER_COUNT, isShelf, isSuccess, ORDER_SIZE } from './game';
 import type { Action, State } from './game';
+import { OceanBackground } from '@/components/mart/OceanBackground';
+import { OceanShell } from '@/components/mart/OceanShell';
+import { hasOceanArt, OceanLayerArt, OceanPanel, OCEAN } from './oceanTheme';
 import { BASKET, shouldPickFruit, TAP_DISTANCE } from './interaction';
 
 type Layer = {
@@ -13,19 +16,22 @@ type Layer = {
   color?: string; fillOpacity?: number; radius?: number; text?: string;
   fontSize?: number; font?: { family: string; style: string }; align?: string;
   rotation?: number; opacity?: number; hidden?: boolean;
+  quantity?: number;
   shadow?: { x: number; y: number; blur: number; alpha: number }[];
 };
 type Design = { id: string; name: string; nodes: Layer[] };
 export const SCREENS = designs as Design[];
-export const COLORS = { background: '#fcf3e4', fruit: '#ef4e4e', green: '#24c5a5', orange: '#f98c36', pink: '#f4779c', ink: '#33291f' };
+export const COLORS = { background: OCEAN.background, fruit: OCEAN.pink, green: OCEAN.green, orange: '#FF8A3D', pink: OCEAN.pink, ink: OCEAN.ink };
 
 function layerStyle(node: Layer): ViewStyle {
   const shadow = node.shadow?.[0];
   const transparentGroup = !node.color && (node.type === 'FRAME' || node.type === 'GROUP');
   return {
     position: 'absolute', left: node.x, top: node.y, width: node.w, height: node.h,
-    backgroundColor: node.type === 'TEXT' ? undefined : node.color,
+    backgroundColor: node.type === 'TEXT' || hasOceanArt(node.name) ? undefined : node.color,
     borderRadius: node.type === 'ELLIPSE' ? Math.max(node.w, node.h) / 2 : node.radius,
+    borderWidth: ['Avatar Pill', 'Ticket', 'Order Card', 'Order Card Sliding', 'Summary Card'].includes(node.name) ? 2.5 : undefined,
+    borderColor: OCEAN.border,
     opacity: (node.opacity ?? 1) * (node.fillOpacity ?? 1),
     transform: node.rotation ? [{ rotate: `${-node.rotation}deg` }] : undefined,
     transformOrigin: 'top left',
@@ -36,10 +42,14 @@ function layerStyle(node: Layer): ViewStyle {
 
 function LayerView({ node, childrenByParent }: { node: Layer; childrenByParent: Map<string, Layer[]> }) {
   if (node.hidden) return null;
+  if (hasOceanArt(node.name)) {
+    const face = childrenByParent.get(node.id)?.find(child => child.name === 'Customer Face')?.text;
+    return <View style={layerStyle(node)}><OceanLayerArt name={node.name} width={node.w} height={node.h} quantity={node.quantity} unhappy={face === '>_<' || face === '•︿•'} /></View>;
+  }
   if (node.type === 'TEXT') {
     const textStyle: TextStyle = {
       color: node.color, fontSize: node.fontSize,
-      fontFamily: node.font?.family === 'Gaegu' ? 'GaeguBold' : 'DunggeunmisoBold',
+      fontWeight: '800',
       textAlign: node.align === 'LEFT' ? 'left' : node.align === 'RIGHT' ? 'right' : 'center',
       lineHeight: node.h, includeFontPadding: false,
     };
@@ -85,9 +95,9 @@ function Fruit({ node, index, scale, pick }: { node: Layer; index: number; scale
   } : {};
   return (
     <Animated.View {...responder.panHandlers} {...keyboard} accessible accessibilityRole="button"
-      accessibilityLabel={`과일 ${index + 1} 담기`} accessibilityHint="누르거나 바구니로 끌어 주세요"
+      accessibilityLabel={`조개 ${index + 1} 담기`} accessibilityHint="누르거나 바구니로 끌어 주세요"
       accessibilityActions={[{ name: 'activate' }]} onAccessibilityAction={pick} onAccessibilityTap={pick}
-      style={[layerStyle(node), { transform: offset.getTranslateTransform() }]} />
+      style={[layerStyle(node), { transform: offset.getTranslateTransform() }]}><OceanShell size={node.w} /></Animated.View>
   );
 }
 
@@ -101,8 +111,11 @@ export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrd
   const design = SCREENS[state.screen];
   const shelf = isShelf(state.screen);
   const count = state.selected.length;
-  const layers = useMemo(() => {
-    if (preview) return design.nodes;
+  const contentLayers = useMemo(() => {
+    if (preview) {
+      const quantity = Number(design.nodes.find(n => n.type === 'TEXT' && n.parent === design.id && /^\d+$/.test(n.text ?? ''))?.text ?? 0);
+      return design.nodes.map(n => n.name === 'Basket' ? { ...n, quantity } : n);
+    }
     const avatar = design.nodes.find(n => n.name === 'Avatar Pill');
     const badge = design.nodes.find(n => n.name === 'Count Badge');
     const dots = design.nodes.filter(n => n.parent === avatar?.id && n.type === 'ELLIPSE' && n.w === 28);
@@ -113,7 +126,7 @@ export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrd
       const dot = dots.indexOf(n);
       if (dot >= 0) return { ...n, color: dot < shownCompleted ? COLORS.green : dot === shownCompleted ? '#75b4f1' : '#d9d9de' };
       if (badge && n.type === 'TEXT' && Math.abs(n.x - badge.x) < 1 && Math.abs(n.y - badge.y) < 1) return { ...n, text: String(count), ...(shelf ? { x: 789, y: 305.5, w: 39, h: 39 } : {}) };
-      if (shelf && n.name === 'Basket') return { ...n, ...BASKET };
+      if (n.name === 'Basket') return { ...n, ...(shelf ? BASKET : {}), quantity: count };
       if (shelf && n.name === 'Count Badge') return { ...n, x: 789, y: 305.5, w: 39, h: 39 };
       if (shelf && (n.name === 'Go To Counter Button' || n.text === '계산대로 ›')) return { ...n, x: 690, y: 350, w: 146, h: 43 };
       if (state.screen === 19 && n.name === 'Dot') return { ...n, color: comparisonDots.indexOf(n) < count ? COLORS.fruit : '#ffffff' };
@@ -122,6 +135,19 @@ export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrd
       return n;
     });
   }, [design, preview, shelf, state.screen, state.completed, state.coins, count]);
+  const layers = useMemo(() => contentLayers.map(n => {
+    if (['Floor', 'Chevron', 'Counter Top Stripe', 'Counter Sliver Stripe', 'Cashier Sliver'].includes(n.name)) return { ...n, hidden: true };
+    if (n.name === 'Back Button') return { ...n, x: 10, y: 5, w: 46, h: 46, shadow: undefined };
+    if (n.name.includes('Shelf') && !n.name.includes('Fruit')) return { ...n, color: n.name.includes('Stripe') ? '#D5F3FF' : n.name.includes('Post') ? '#85CFFF' : '#378DD0', radius: 6 };
+    if (n.name === 'Counter Sliver') return { ...n, color: '#2D8CF0', radius: 18 };
+    if (n.name === 'Dimmer') return { ...n, color: '#123A70', fillOpacity: 0.38 };
+    if (n.name === 'Dot') return { ...n, opacity: n.color === '#ffffff' ? 0.2 : 1 };
+    if (n.name === 'Order Number Badge' || n.name === 'Count Badge') return { ...n, color: n.color === '#f4779c' ? '#FF5FA2' : '#2D8CF0' };
+    const parent = contentLayers.find(p => p.id === n.parent);
+    if (parent?.name === 'Avatar Pill' && n.type === 'ELLIPSE' && n.w === 22) return { ...n, name: 'Pearl' };
+    if (n.type === 'TEXT' && n.color !== '#ffffff') return { ...n, color: OCEAN.ink };
+    return n;
+  }), [contentLayers]);
   const childrenByParent = useMemo(() => {
     const map = new Map<string, Layer[]>();
     layers.forEach(n => map.set(n.parent, [...(map.get(n.parent) ?? []), n]));
@@ -132,13 +158,13 @@ export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrd
   if (!preview) {
     actions.push({ name: 'Back Button', label: '게임 선택으로 돌아가기', action: onExit });
     if ([0, 1, 2].includes(state.screen)) actions.push({ name: 'Customer Group', label: '손님 주문 받기', action: () => dispatch({ type: 'advance', fromScreen: state.screen }) });
-    if (state.screen === 4) actions.push({ name: 'Confirm Button', label: '과일 5개 주문 확인', action: () => dispatch({ type: 'advance', fromScreen: state.screen }) });
+    if (state.screen === 4) actions.push({ name: 'Confirm Button', label: '조개 5개 주문 확인', action: () => dispatch({ type: 'advance', fromScreen: state.screen }) });
     if (shelf) {
       actions.push({ name: 'Basket', label: `바구니 ${count}개, 눌러서 한 개 되돌리기`, action: () => dispatch({ type: 'remove' }) });
       actions.push({ name: 'Go To Counter Button', label: '계산대로 이동', action: () => dispatch({ type: 'counter' }) });
     }
-    if (state.screen === 12) actions.push({ name: 'Hand Over Button', label: `과일 ${count}개 건네주기`, action: () => dispatch({ type: 'advance', fromScreen: state.screen }) });
-    if ([15, 19].includes(state.screen)) actions.push({ name: 'Back To Shelf Button', label: count > ORDER_SIZE ? '과일이 많아요. 진열대에서 되돌리기' : '과일이 모자라요. 진열대에서 더 담기', action: () => dispatch({ type: 'shelf' }) });
+    if (state.screen === 12) actions.push({ name: 'Hand Over Button', label: `조개 ${count}개 건네주기`, action: () => dispatch({ type: 'advance', fromScreen: state.screen }) });
+    if ([15, 19].includes(state.screen)) actions.push({ name: 'Back To Shelf Button', label: count > ORDER_SIZE ? '조개가 많아요. 진열대에서 되돌리기' : '조개가 모자라요. 진열대에서 더 담기', action: () => dispatch({ type: 'shelf' }) });
     if (state.screen === 23) actions.push({ name: 'Next Customer Button', label: state.completed === CUSTOMER_COUNT ? '오늘 장사 마치기' : '다음 손님 맞이하기', action: () => dispatch({ type: 'advance', fromScreen: state.screen }) });
     if (state.screen === 24) actions.push({ name: 'End Of Day Button', label: '오늘 장사 결과 보기', action: () => dispatch({ type: 'advance', fromScreen: state.screen }) });
     if (state.screen === 25) actions.push({ name: 'Back To Shop Button', label: '가게로 돌아가 새로 시작', action: () => dispatch({ type: 'restart' }) });
@@ -146,6 +172,7 @@ export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrd
   }
   return (
     <View testID={`fruitstore-screen-${state.screen + 1}`} style={styles.board}>
+      <OceanBackground style={StyleSheet.absoluteFill} imageStyle={{ width: '100%', height: '100%' }} />
       <View pointerEvents="none" accessible={false} aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={StyleSheet.absoluteFill}>
         {childrenByParent.get(design.id)?.map(n => <LayerView key={n.id} node={n} childrenByParent={childrenByParent} />)}
       </View>
@@ -156,10 +183,10 @@ export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrd
       })}
       {!preview && shelf && count > 0 && !find('Go To Counter Button') && (
         <Pressable accessibilityRole="button" accessibilityLabel="계산대로 이동" onPress={() => dispatch({ type: 'counter' })} style={styles.counterButton}>
-          <Text style={styles.buttonText}>계산대로 ›</Text>
+          <View pointerEvents="none" style={StyleSheet.absoluteFill}><OceanPanel width={146} height={43} warm /></View><Text style={styles.buttonText}>계산대로 ›</Text>
         </Pressable>
       )}
-      {!preview && state.screen === 12 && <Pressable accessibilityRole="button" accessibilityLabel="진열대로 돌아가 수량 바꾸기" onPress={() => dispatch({ type: 'shelf' })} style={styles.shelfReturn}><Text style={styles.buttonText}>‹ 진열대로</Text></Pressable>}
+      {!preview && state.screen === 12 && <Pressable accessibilityRole="button" accessibilityLabel="진열대로 돌아가 수량 바꾸기" onPress={() => dispatch({ type: 'shelf' })} style={styles.shelfReturn}><View pointerEvents="none" style={StyleSheet.absoluteFill}><OceanPanel width={150} height={44} warm /></View><Text style={styles.buttonText}>‹ 진열대로</Text></Pressable>}
     </View>
   );
 }
@@ -168,5 +195,5 @@ const styles = StyleSheet.create({
   board: { width: 852, height: 393, overflow: 'hidden', backgroundColor: COLORS.background },
   counterButton: { position: 'absolute', left: 690, top: 350, width: 146, height: 43, backgroundColor: COLORS.green, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   shelfReturn: { position: 'absolute', left: 16, top: 340, width: 150, height: 44, backgroundColor: COLORS.green, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
-  buttonText: { fontFamily: 'GaeguBold', fontSize: 16, color: '#fff' },
+  buttonText: { fontWeight: '800', fontSize: 16, color: '#fff' },
 });

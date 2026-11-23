@@ -52,7 +52,7 @@ function GameSlot({ game, position, count, slot, size, activeSize, gap, onPress 
         className="flex-1 items-center justify-center rounded-full"
         style={{ backgroundColor: game.accent }}
       >
-        <View className="rounded-full bg-white/25" style={{ width: size * 0.34, height: size * 0.34 }} />
+        {game.Icon ? <game.Icon size={size * 0.62} /> : <View className="rounded-full bg-white/25" style={{ width: size * 0.34, height: size * 0.34 }} />}
       </Pressable>
     </Animated.View>
   );

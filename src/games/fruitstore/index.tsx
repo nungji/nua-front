@@ -1,8 +1,7 @@
 import { useEffect, useReducer, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
-import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
-import { AccessibilityInfo, ActivityIndicator, AppState, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { AccessibilityInfo, AppState, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useStageRouter } from '@/hooks/useStageRouter';
@@ -19,10 +18,6 @@ export function FruitStoreScene(_props: GameSceneProps) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
   const [orderOpen, setOrderOpen] = useState(false);
   const [active, setActive] = useState(AppState.currentState === 'active');
-  const [fontsLoaded, fontError] = useFonts({
-    GaeguBold: require('../../assets/fruitstore/Gaegu-Bold.ttf'),
-    DunggeunmisoBold: require('../../assets/fruitstore/Dunggeunmiso-Bold.otf'),
-  });
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const scale = Math.min((width - insets.left - insets.right) / 852, (height - insets.top - insets.bottom) / 393);
@@ -32,17 +27,16 @@ export function FruitStoreScene(_props: GameSceneProps) {
     return () => listener.remove();
   }, []);
   useEffect(() => {
-    if (preview || !active || (!fontsLoaded && !fontError) || orderOpen) return;
+    if (preview || !active || orderOpen) return;
     const delay = transitionDelay(state.screen);
     if (delay === null) return;
     const timer = setTimeout(() => dispatch({ type: 'advance', fromScreen: state.screen }), delay);
     return () => clearTimeout(timer);
-  }, [state.screen, preview, active, fontsLoaded, fontError, orderOpen]);
+  }, [state.screen, preview, active, orderOpen]);
   useEffect(() => {
-    if (!preview && isShelf(state.screen)) AccessibilityInfo.announceForAccessibility(`바구니에 과일 ${state.selected.length}개. 주문은 5개예요.`);
+    if (!preview && isShelf(state.screen)) AccessibilityInfo.announceForAccessibility(`바구니에 조개 ${state.selected.length}개. 주문은 5개예요.`);
   }, [state.selected.length, state.screen, preview]);
 
-  if (!fontsLoaded && !fontError) return <View style={styles.root}><ActivityIndicator color={COLORS.orange} accessibilityLabel="과일 가게 준비 중" /></View>;
   const shown = preview ? { ...state, screen: previewIndex } : state;
   const safeArea = { paddingLeft: insets.left, paddingRight: insets.right, paddingTop: insets.top, paddingBottom: insets.bottom };
   const stageSize = { width: 852 * scale, height: 393 * scale };
@@ -77,7 +71,7 @@ export function FruitStoreScene(_props: GameSceneProps) {
 const styles = StyleSheet.create({
   stage: { position: 'absolute' },
   root: { flex: 1, backgroundColor: COLORS.background, alignItems: 'center', justifyContent: 'center' },
-  rotate: { position: 'absolute', bottom: 40, color: COLORS.ink, fontFamily: 'GaeguBold', fontSize: 18 },
+  rotate: { position: 'absolute', bottom: 40, color: COLORS.ink, fontWeight: '700', fontSize: 18 },
   previewBar: { position: 'absolute', bottom: 0, backgroundColor: '#ffffffed', borderRadius: 20, flexDirection: 'row', alignItems: 'center' },
   previewLabel: { fontSize: 11, color: COLORS.ink },
   previewButton: { minWidth: 44, height: 32, alignItems: 'center', justifyContent: 'center' },
