@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { MART_CORNER_ORDER, MART_STAGE_STEPS } from '@/enums';
 import type { MartCornerId, MartStageStep, MartWordStatus } from '@/enums';
-import { getWordCorner, isCornerCompleted } from '@/data/martWords';
+import { getWordCorner, isCornerCompleted, MART_UNLOCK_ALL } from '@/data/martWords';
 
 interface MartState {
   cornerStatus: Record<MartCornerId, MartWordStatus>;
@@ -16,8 +16,8 @@ interface MartState {
 
 const INITIAL_CORNER_STATUS: Record<MartCornerId, MartWordStatus> = {
   grocery: 'unlocked',
-  household: 'locked',
-  electronics: 'locked',
+  household: MART_UNLOCK_ALL ? 'unlocked' : 'locked',
+  electronics: MART_UNLOCK_ALL ? 'unlocked' : 'locked',
 };
 
 export const useMartStore = create<MartState>((set, get) => ({
