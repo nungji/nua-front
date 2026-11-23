@@ -4,6 +4,8 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import type { SharedValue } from 'react-native-reanimated';
 import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
 
+import { GAME_CHARACTERS } from './GameCharacter';
+
 import { Game } from '@/games';
 import { CAROUSEL_SPRING, stageScale } from '@/stage';
 import { COLORS, FONT, SHADOW, TEXT_SHADOW, withAlpha } from '@/theme';
@@ -114,7 +116,7 @@ export function GameSelector({ games, onSelect }: Props) {
 
       {/* Keep the entire mascot outside the animated cards: no crop or moving mask. */}
       <View testID="selector-mascot" pointerEvents="none" style={{ position: 'absolute', top: -172 * scale, width: 160 * scale, height: 190 * scale, zIndex: 10, overflow: 'visible' }}>
-        <Image source={require('../assets/shellstore/customer.png')} resizeMode="contain" style={{ width: '100%', height: '100%' }} />
+        <Image source={GAME_CHARACTERS[games[active].id]} resizeMode="contain" style={{ width: '100%', height: '100%' }} />
       </View>
 
       <Text

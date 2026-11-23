@@ -1,3 +1,4 @@
+import { GameCharacter } from '@/components/GameCharacter';
 import { View } from 'react-native';
 import { useStageRouter } from '@/hooks/useStageRouter';
 import { OceanBackButton, OceanBookButton } from './OceanCircleButton';
@@ -20,6 +21,7 @@ export function OceanTopBar({ title, onBack, onPressWordbook }: OceanTopBarProps
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingTop: 10, height: 66 }}>
       <OceanBackButton onPress={onBack ?? back} />
+      <GameCharacter game="mart" width={52} height={56} />
       {title ? <OceanTitlePill title={title} /> : <View style={{ flex: 1 }} />}
       {onPressWordbook ? (
         <OceanBookButton onPress={onPressWordbook} />
