@@ -1,3 +1,5 @@
+import { shade } from '@/theme';
+
 import { buildSilhouettePath } from './silhouette';
 import { SHAPES, ShapeId } from './shapeset';
 import { piecePolygon, shiftedPolygon } from './shapes';
@@ -17,13 +19,21 @@ export const SNAP_RADIUS = 56;
 export const PEDESTAL_HEIGHT = 26;
 
 const TONES = ['#C9C2B6', '#9FB4D6', '#E3A9A0', '#A3C2B0', '#B5AECD', '#D8C89A', '#AEB7C4', '#CBB6C9', '#A9C6C6'];
-const COLORS = ['#F05A28', '#2F6FED', '#E5553F', '#3D3D4E', '#6B4FA8', '#E0A400', '#2B7A5E', '#B03A6B', '#1F7A8C'];
+const OBJECT_COLORS = ['#EE6474', '#01A7FC', '#FFC93C', '#995DBE', '#44D5EE', '#FFA24C', '#97E1D1', '#016BEA', '#F9E4A5'];
 const INITIAL_TURNS = [3, 2, 1, 2, 3, 1, 2, 3, 1];
 const INITIAL_FLIPS = [true, false, false, true, false, false, true, false, true];
 
 const FLOOR_MARGIN = 10;
 const FLOOR_GAP = 7;
 const TOP_MARGIN = 8;
+
+/** Every part of one object shares a hue so the finished piece reads as a single toy. */
+function partColor(stageId: number, index: number): string {
+  const base = OBJECT_COLORS[(stageId - 1) % OBJECT_COLORS.length];
+  const shift = [0, -0.12, 0.1, -0.06][index % 4];
+
+  return shade(base, shift);
+}
 
 function part(id: string, shape: ShapeId, x: number, y: number): PartSpec {
   return { id, shape, slot: { x, y } };
@@ -453,14 +463,20 @@ export function stageHint(stage: StageConfig) {
   return features.join(' · ');
 }
 
+/** Shape specs are authored against a 460px wide board and scaled from there. */
+export function puzzleScale(size: BoardSize): number {
+  return Math.max(0.85, Math.min(1.7, size.width / 460));
+}
+
 export function buildPuzzle(stage: StageConfig, size: BoardSize): Puzzle {
+  const k = puzzleScale(size);
   const parts = stage.parts;
-  const pedestalTop = size.height - PEDESTAL_HEIGHT;
+  const pedestalTop = size.height - PEDESTAL_HEIGHT * k;
   const targetX = Math.round(size.width * 0.5);
   const targetWidth = size.width - targetX - 8;
-  const minX = Math.min(...parts.map((item) => item.slot.x));
-  const maxX = Math.max(...parts.map((item) => item.slot.x + SHAPES[item.shape].width));
-  const maxY = Math.max(...parts.map((item) => item.slot.y + SHAPES[item.shape].height));
+  const minX = Math.min(...parts.map((item) => item.slot.x * k));
+  const maxX = Math.max(...parts.map((item) => (item.slot.x + SHAPES[item.shape].width) * k));
+  const maxY = Math.max(...parts.map((item) => (item.slot.y + SHAPES[item.shape].height) * k));
   const shiftX = targetX + (targetWidth - (maxX - minX)) / 2 - minX;
   const shiftY = pedestalTop - maxY;
 
@@ -469,14 +485,14 @@ export function buildPuzzle(stage: StageConfig, size: BoardSize): Puzzle {
     return {
       id: item.id,
       shape: shape.kind,
-      width: shape.width,
-      height: shape.height,
+      width: shape.width * k,
+      height: shape.height * k,
       tone: TONES[index % TONES.length],
-      color: COLORS[index % COLORS.length],
+      color: partColor(stage.id, index),
       start: { x: 0, y: 0 },
-      slot: { x: item.slot.x + shiftX, y: item.slot.y + shiftY },
+      slot: { x: item.slot.x * k + shiftX, y: item.slot.y * k + shiftY },
       edges: emptyEdges(),
-      chamfers: shape.chamfers ?? [0, 0, 0, 0],
+      chamfers: (shape.chamfers ?? [0, 0, 0, 0]).map((value) => value * k) as Chamfers,
       requires: undefined,
       overlaps: false,
       needsHint: false,
@@ -504,10 +520,10 @@ export function buildPuzzle(stage: StageConfig, size: BoardSize): Puzzle {
   layoutScatter(pieces, size, targetX);
 
   const pedestal: Pedestal = {
-    x: targetX + 4,
+    x: 8,
     y: pedestalTop,
-    width: Math.max(60, size.width - targetX - 16),
-    height: PEDESTAL_HEIGHT
+    width: Math.max(60, size.width - 16),
+    height: PEDESTAL_HEIGHT * k
   };
 
   return {
