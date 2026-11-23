@@ -3,9 +3,9 @@ import { Animated, Image, PanResponder, Platform, Pressable, StyleSheet, Text, V
 import type { ReactNode } from 'react';
 import type { ViewStyle } from 'react-native';
 
-import { CUSTOMER_COUNT, isShelf, isSuccess, ORDER_SIZE, availablePack } from './game';
+import { CUSTOMER_COUNT, isShelf, isSuccess, orderSize, availablePack } from './game';
 import type { Action, State } from './game';
-import { ART, BasketArt, Character, Coin, CounterArt, GlossyButton, Logo, OutlinedLabel, Register, ShelfArt, Shell, ShellPack } from './PortraitArt';
+import { ART, BasketArt, Character, Coin, CounterArt, GlossyButton, OutlinedLabel, Register, ShelfArt, Shell, ShellPack } from './PortraitArt';
 import { PORTRAIT, PORTRAIT_BASKET, SHELF_SLOTS } from './portraitLayout';
 import { BASKET, SHELF, FLOOR, FLOOR_SLOTS, containsPoint, floorSlotAt, TAP_DISTANCE } from './interaction';
 
@@ -29,8 +29,8 @@ function Header({ state, onExit }: { state: State; onExit: () => void }) {
   </>;
 }
 
-function Order({ onPress }: { onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel="주문서 다시 보기" onPress={onPress} style={[at(247, 100, 128, 48), styles.ticket]}><Shell size={38} /><Text style={styles.orderNumber}>×{ORDER_SIZE}</Text><Text style={styles.star}>★</Text></Pressable>;
+function Order({ onPress, target }: { onPress: () => void; target: number }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel="주문서 다시 보기" onPress={onPress} style={[at(247, 100, 128, 48), styles.ticket]}><Shell size={38} /><Text style={styles.orderNumber}>×{target}</Text><Text style={styles.star}>★</Text></Pressable>;
 }
 
 function DraggablePack({ rect, label, count, scale, onTap, onDrop, onDrag, selected = false, separated = false, children }: {
@@ -68,39 +68,26 @@ function DraggablePack({ rect, label, count, scale, onTap, onDrop, onDrag, selec
   return <Animated.View {...responder.panHandlers} {...keyboard} accessible accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected }} accessibilityHint="원하는 자리로 끌어서 놓아 주세요" accessibilityActions={[{ name: 'activate' }]} onAccessibilityAction={onTap} onAccessibilityTap={onTap} style={[at(rect.x, rect.y, rect.w, rect.h), selected && styles.selectedPack, { zIndex: dragging ? 50 : 5, transform: offset.getTranslateTransform() }]}>{children ?? <ShellPack count={count} width={rect.w} height={rect.h} separated={separated} />}</Animated.View>;
 }
 
-function Welcome({ onStart, onExit }: { onStart: () => void; onExit: () => void }) {
-  return <>
-    <View style={at(40, 62)}><Logo /></View>
-    <View style={[at(40, 190, 310, 32), styles.tagline]}><Text style={styles.taglineText}>친구들과 함께 떠나는 신나는 바다 모험!</Text></View>
-    <View style={at(84, 218, 222, 283)}><Character kind="customer" width={222} height={283} /></View>
-    <View style={[at(88, 381, 214, 214), styles.bubble]}><View style={styles.bubbleShine} /><View style={styles.bubbleSand} /><Shell size={119} /><Text style={styles.bubbleStar}>★</Text></View>
-    <Button label="게임 선택으로 돌아가기" text="‹" x={23} y={454} w={50} h={56} onPress={onExit} />
-    <Button label="조개 상점 시작" text="›" x={316} y={454} w={50} h={56} onPress={onStart} />
-    <View style={styles.dots}><View style={styles.dot} /><View style={[styles.dot, { backgroundColor: '#FFD324' }]} /><View style={styles.dot} /></View>
-    <Button label="게임으로 들어가기" text="게임으로 들어가기 ▷" x={41} y={630} w={308} h={84} yellow onPress={onStart} />
-    <Text style={styles.welcomeLabel}>조개 상점</Text>
-  </>;
-}
-
-export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrder, welcome = false, onStart = () => {} }: {
-  state: State; scale: number; preview: boolean; dispatch: (action: Action) => void; onExit: () => void; onOrder: () => void; welcome?: boolean; onStart?: () => void;
+export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrder }: {
+  state: State; scale: number; preview: boolean; dispatch: (action: Action) => void; onExit: () => void; onOrder: () => void;
 }) {
   const [dragSource, setDragSource] = useState<'shelf' | 'floor' | 'basket' | null>(null);
   const [chosenSlot, setChosenSlot] = useState<number | null>(null);
   const chosen = chosenSlot !== null && state.floor[chosenSlot].length > 0 ? chosenSlot : null;
   const shelf = isShelf(state.screen);
   const count = state.selected.length;
+  const target = orderSize(state);
   const correction = [15, 19].includes(state.screen);
   const success = isSuccess(state.screen) || state.screen === 23;
   const advance = () => dispatch({ type: 'advance', fromScreen: state.screen });
   const scene = state.screen;
   const { x, y, w, h } = PORTRAIT_BASKET;
-  return <View testID={welcome ? 'shellstore-welcome' : `fruitstore-screen-${scene + 1}`} style={styles.board}>
+  return <View testID={`fruitstore-screen-${scene + 1}`}  style={styles.board}>
     <Image source={ART.ocean} resizeMode="cover" style={styles.background} accessible={false} />
-    {welcome ? <Welcome onStart={onStart} onExit={onExit} /> : <>
+    <>
       <Header state={state} onExit={onExit} />
       {shelf ? <>
-        <Order onPress={onOrder} />
+        <Order onPress={onOrder} target={target} />
         <View pointerEvents="none" style={at(15, 147)}><ShelfArt /></View>
         <View pointerEvents="none" style={at(225, 558)}><Character kind="cashier" width={145} height={121} /></View>
         <View pointerEvents="none" style={at(70, 663)}><CounterArt width={310} height={116} /></View>
@@ -136,10 +123,10 @@ export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrd
         <View pointerEvents="none" style={at(16, 476)}><CounterArt width={222} height={83} /></View>
         <View pointerEvents="none" style={at(29, 425)}><Register /></View>
         <View pointerEvents="none" style={at(240, 370)}><Character kind="customer" width={142} height={193} /></View>
-        {scene >= 3 && scene < 24 && <View style={[at(177, 231, 185, 100), styles.thought]}><Shell size={52} /><Text style={styles.orderNumber}>×{ORDER_SIZE}</Text><View style={styles.thoughtDot} /></View>}
+        {scene >= 3 && scene < 24 && <View style={[at(177, 231, 185, 100), styles.thought]}><Shell size={52} /><Text style={styles.orderNumber}>×{target}</Text><View style={styles.thoughtDot} /></View>}
         {scene === 4 && <>
-          <View style={[at(55, 580, 280, 64), styles.comparison]}>{Array.from({ length: ORDER_SIZE }, (_, i) => <Shell key={i} size={43} />)}</View>
-          <Button label="조개 5개 주문 확인" text="확인 ✓" x={95} y={662} w={200} onPress={advance} />
+          <View style={[at(55, 580, 280, 64), styles.comparison]}>{Array.from({ length: target }, (_, i) => <Shell key={i} size={Math.min(43, 250 / target)} />)}</View>
+          <Button label={`조개 ${target}개 주문 확인`} text="확인 ✓" x={95} y={662} w={200} onPress={advance} />
         </>}
         {scene >= 11 && scene <= 23 && <View pointerEvents="none" style={at(230, 459)}><BasketArt count={count} width={115} height={84} /></View>}
         {scene === 12 && <>
@@ -147,8 +134,8 @@ export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrd
           <Pressable accessibilityRole="button" accessibilityLabel="진열대로 돌아가 수량 바꾸기" onPress={() => dispatch({ type: 'shelf' })} style={[at(95, 738, 200, 44), styles.return]}><Text style={styles.returnText}>‹ 진열대로 돌아가기</Text></Pressable>
         </>}
         {(correction || success) && <>
-          <View style={[at(54, 571, 282, 76), styles.comparison]}><View><ShellPack count={count} width={73} height={56} /></View><Text style={[styles.equal, { color: correction ? '#FF3157' : '#25B87C' }]}>{correction ? '≠' : '='}</Text><Shell size={44} /><Text style={styles.orderNumber}>×{ORDER_SIZE}</Text></View>
-          {correction && <><Text style={[styles.feedback, at(40, 646, 310), { marginTop: 0, fontSize: 14 }]}>{count > ORDER_SIZE ? '조개가 조금 많아요' : '조개를 조금 더 담아 볼까요?'}</Text><Button label={count > ORDER_SIZE ? '조개가 많아요. 진열대에서 되돌리기' : '조개가 모자라요. 진열대에서 더 담기'} text="⟳" x={100} y={663} w={190} onPress={() => dispatch({ type: 'shelf' })} /></>}
+          <View style={[at(54, 571, 282, 76), styles.comparison]}><View><ShellPack count={count} width={73} height={56} /></View><Text style={[styles.equal, { color: correction ? '#FF3157' : '#25B87C' }]}>{correction ? '≠' : '='}</Text><Shell size={44} /><Text style={styles.orderNumber}>×{target}</Text></View>
+          {correction && <><Text style={[styles.feedback, at(40, 646, 310), { marginTop: 0, fontSize: 14 }]}>{count > target ? '조개가 조금 많아요' : '조개를 조금 더 담아 볼까요?'}</Text><Button label={count > target ? '조개가 많아요. 진열대에서 되돌리기' : '조개가 모자라요. 진열대에서 더 담기'} text="⟳" x={100} y={663} w={190} onPress={() => dispatch({ type: 'shelf' })} /></>}
           {success && scene !== 23 && <Text style={[styles.feedback, at(40, 665, 310)]}>딱 맞아요! 고마워요!</Text>}
         </>}
         {scene === 23 && <><View style={[at(139, 657, 112, 48), styles.reward]}><Coin size={37} /><Text style={styles.orderNumber}>+3</Text></View><Button label={state.completed === CUSTOMER_COUNT ? '오늘 장사 마치기' : '다음 손님 맞이하기'} text={state.completed === CUSTOMER_COUNT ? '오늘 장사 끝 ✓' : '다음 손님 ❯'} x={70} y={725} onPress={advance} /></>}
@@ -156,7 +143,7 @@ export function FruitStoreBoard({ state, scale, preview, dispatch, onExit, onOrd
         {[0, 1, 2, 3, 5, 6, 11, 13].includes(scene) && <Text style={[styles.feedback, at(35, 622, 320)]}>{scene < 4 ? '어서 오세요!' : scene < 7 ? '조개를 골라 볼까요?' : scene === 13 ? '함께 세어 볼까요?' : '손님에게 가져가요'}</Text>}
         {scene >= 24 && <View style={[at(34, 188, 322, 526), styles.summary]}><Text style={styles.summaryTitle}>오늘 장사 끝!</Text><Character kind="cashier" width={155} height={145} /><Text style={styles.summaryCopy}>친구 {state.completed}명의 주문을 완성했어요</Text><View style={styles.reward}><Coin size={48} /><Text testID="shellstore-total" style={styles.total}>{state.coins}</Text></View><Text style={styles.summaryCopy}>고마워요, 꼬마 점원!</Text><Button label={scene === 24 ? '오늘 장사 결과 보기' : '가게로 돌아가 새로 시작'} text={scene === 24 ? '결과 보기 ❯' : '다시 놀기 ⟳'} x={30} y={420} w={260} yellow onPress={scene === 24 ? advance : () => dispatch({ type: 'restart' })} /></View>}
       </>}
-    </>}
+    </>
     {preview && <View pointerEvents="none" style={StyleSheet.absoluteFill} />}
   </View>;
 }
@@ -194,13 +181,4 @@ const styles = StyleSheet.create({
   summaryTitle: { fontSize: 32, fontWeight: '900', color: COLORS.ink },
   summaryCopy: { color: COLORS.ink, fontSize: 16, fontWeight: '700' },
   total: { color: COLORS.ink, fontSize: 46, fontWeight: '900' },
-  tagline: { backgroundColor: '#DDFBFF', borderRadius: 20, borderWidth: 3, borderColor: 'white', alignItems: 'center', justifyContent: 'center' },
-  taglineText: { color: '#123D9D', fontWeight: '900', fontSize: 13 },
-  bubble: { borderWidth: 6, borderColor: 'white', borderRadius: 110, backgroundColor: '#03D8FA', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', boxShadow: '0 0 0 5px #A9F5FF' },
-  bubbleShine: { position: 'absolute', top: 13, left: 30, width: 58, height: 14, borderRadius: 10, backgroundColor: '#E5FFFF', transform: [{ rotate: '-32deg' }] },
-  bubbleSand: { position: 'absolute', bottom: -25, width: 230, height: 90, backgroundColor: '#FFE087', borderRadius: 100 },
-  bubbleStar: { position: 'absolute', right: 17, bottom: 8, color: '#F371BC', fontSize: 43 },
-  dots: { position: 'absolute', top: 608, alignSelf: 'center', flexDirection: 'row', gap: 12 },
-  dot: { width: 15, height: 15, borderRadius: 10, backgroundColor: '#09D9F1', borderColor: 'white', borderWidth: 2 },
-  welcomeLabel: { position: 'absolute', top: 726, alignSelf: 'center', color: 'white', fontWeight: '800', fontSize: 18 },
 });

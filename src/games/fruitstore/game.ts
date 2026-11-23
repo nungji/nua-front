@@ -1,4 +1,4 @@
-export const ORDER_SIZE = 5;
+export const ORDER_SIZES = [5, 4, 6, 7] as const;
 export const SHELL_PACKS = [2, 3, 4, 6, 7, 1, 2, 3, 4] as const;
 export const STOCK_SIZE = SHELL_PACKS.reduce<number>((sum, size) => sum + size, 0);
 export const packShells = (pack: number): number[] => {
@@ -6,7 +6,7 @@ export const packShells = (pack: number): number[] => {
   const start = SHELL_PACKS.slice(0, pack).reduce<number>((sum, size) => sum + size, 0);
   return Array.from({ length: SHELL_PACKS[pack] }, (_, i) => start + i);
 };
-export const CUSTOMER_COUNT = 4;
+export const CUSTOMER_COUNT = ORDER_SIZES.length;
 export const REWARD = 3;
 
 export type Correction = 'excess' | 'short' | null;
@@ -18,6 +18,10 @@ export type State = {
   coins: number;
   correction: Correction;
 };
+/** Reward screens still show the order just completed, not the next customer's order. */
+export const orderSize = (state: Pick<State, 'screen' | 'completed'>): number =>
+  ORDER_SIZES[Math.min(ORDER_SIZES.length - 1, Math.max(0, state.completed - (state.screen >= 23 ? 1 : 0)))];
+
 export type Action =
   | { type: 'advance'; fromScreen: number }
   | { type: 'stage-pack'; pack: number; slot: number }
@@ -40,15 +44,16 @@ const validSlot = (slot: number) => Number.isInteger(slot) && slot >= 0 && slot 
 export const isShelf = (screen: number) => [7, 8, 9, 10, 16, 17, 20, 21].includes(screen);
 export const isSuccess = (screen: number) => [14, 18, 22].includes(screen);
 
-function shelfScreen(count: number, correction: Correction) {
-  if (count === ORDER_SIZE) return correction === 'excess' ? 17 : correction === 'short' ? 21 : 9;
+function shelfScreen(count: number, correction: Correction, target: number) {
+  if (count === target) return correction === 'excess' ? 17 : correction === 'short' ? 21 : 9;
   if (correction === 'excess') return 16;
   if (correction === 'short') return 20;
-  return count === 0 ? 7 : count > ORDER_SIZE ? 10 : 8;
+  return count === 0 ? 7 : count > target ? 10 : 8;
 }
 
 /** All rewards and quantities are driven by the game, never by presentation timers. */
 export function gameReducer(state: State, action: Action): State {
+  const target = orderSize(state);
   if (action.type === 'restart') return { ...initialState, selected: [], floor: emptyFloor() };
   if (action.type === 'stage-pack') {
     if (!isShelf(state.screen)) return state;
@@ -71,7 +76,7 @@ export function gameReducer(state: State, action: Action): State {
     } else if (action.type === 'basket-floor') {
       const selected = [...state.selected, ...floor[slot]];
       floor[slot] = [];
-      return { ...state, floor, selected, screen: shelfScreen(selected.length, state.correction) };
+      return { ...state, floor, selected, screen: shelfScreen(selected.length, state.correction, target) };
     } else if (action.type === 'split-floor') {
       const empty = floor.findIndex(group => group.length === 0);
       if (floor[slot].length < 2 || empty < 0) return state;
@@ -84,13 +89,13 @@ export function gameReducer(state: State, action: Action): State {
   if (action.type === 'unbasket') {
     if (!isShelf(state.screen) || state.selected.length === 0 || !validSlot(action.slot)) return state;
     const floor = state.floor.map((group, i) => i === action.slot ? [...group, ...state.selected] : group);
-    return { ...state, selected: [], floor, screen: shelfScreen(0, state.correction) };
+    return { ...state, selected: [], floor, screen: shelfScreen(0, state.correction, target) };
   }
   if (action.type === 'counter') return isShelf(state.screen) && state.selected.length > 0 ? { ...state, screen: 11 } : state;
   if (action.type === 'shelf') {
     if (![12, 15, 19].includes(state.screen)) return state;
     const correction = state.screen === 15 ? 'excess' : state.screen === 19 ? 'short' : state.correction;
-    return { ...state, correction, screen: shelfScreen(state.selected.length, correction) };
+    return { ...state, correction, screen: shelfScreen(state.selected.length, correction, target) };
   }
   // Ignore callbacks from a screen that has already transitioned (double taps or queued timers).
   if (action.type !== 'advance' || action.fromScreen !== state.screen) return state;
@@ -98,7 +103,7 @@ export function gameReducer(state: State, action: Action): State {
   if (state.screen === 11 || state.screen === 12) return { ...state, screen: state.screen + 1 };
   if (state.screen === 13) {
     const count = state.selected.length;
-    const screen = count > ORDER_SIZE ? 15 : count < ORDER_SIZE ? 19 : state.correction === 'excess' ? 18 : state.correction === 'short' ? 22 : 14;
+    const screen = count > target ? 15 : count < target ? 19 : state.correction === 'excess' ? 18 : state.correction === 'short' ? 22 : 14;
     return { ...state, screen };
   }
   if (isSuccess(state.screen)) return { ...state, screen: 23, completed: state.completed + 1, coins: state.coins + REWARD };
