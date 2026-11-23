@@ -1,0 +1,32 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const ts = require('typescript');
+const mod = { exports: {} };
+new Function('exports', 'require', 'module', ts.transpileModule(fs.readFileSync('src/games/daiso/game.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText)(mod.exports, require, mod);
+const { INITIAL, transition } = mod.exports;
+let state = INITIAL;
+const act = action => state = transition(state, action);
+act({ type: 'choose', item: 'bucket' });
+assert.equal(state.phase, 'map');
+act({ type: 'start' });
+act({ type: 'next' });
+assert.equal(state.page, 1);
+act({ type: 'next' });
+assert.equal(state.phase, 'choose');
+act({ type: 'choose', item: 'sock' });
+for (let i = 0; i < 3; i++) { assert.equal(state.page, i); act({ type: 'next' }); }
+assert.equal(state.phase, 'choose');
+assert.equal(state.completed, false);
+act({ type: 'choose', item: 'bucket' });
+for (let i = 0; i < 4; i++) { assert.equal(state.page, i); act({ type: 'next' }); }
+assert.equal(state.phase, 'complete');
+assert.equal(state.completed, true);
+act({ type: 'map' });
+assert.equal(state.completed, true);
+act({ type: 'restart' });
+assert.equal(state.phase, 'story');
+assert.equal(state.item, null);
+act({ type: 'back' });
+assert.equal(state.phase, 'map');
+assert.deepEqual(INITIAL, { phase: 'map', page: 0, item: null, completed: false });
+console.log('PASS daiso intro, wrong retry, correct completion, replay, back, immutable state');
