@@ -1,19 +1,21 @@
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import { useId } from 'react';
+import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, Stop } from 'react-native-svg';
 import type { GameIconProps } from '@/games/types';
 
-/** Seaweed basket carrying a pearl shell and a little fish. */
 export function MartIcon({ width = 64, height = 64 }: GameIconProps) {
+  const id = useId();
+  const shell = 'M10 27Q3 16 14 16Q13 6 24 12Q32 0 40 12Q51 6 51 17Q63 17 55 29L49 51Q32 63 15 51Z';
   return <Svg width={width} height={height} viewBox="0 0 64 64">
-    <Path d="M17 31Q16 6 32 6Q48 6 47 31" fill="none" stroke="white" strokeWidth="9" strokeLinecap="round" />
-    <Path d="M17 31Q16 6 32 6Q48 6 47 31" fill="none" stroke="#70E9CC" strokeWidth="5" strokeLinecap="round" />
-    <Path d="M13 32Q5 20 16 22Q13 12 23 17Q29 10 33 20Q42 17 40 27L31 36Z" fill="#FF9CB9" stroke="white" strokeWidth="2" strokeLinejoin="round" />
-    <Path d="M24 32L20 21M28 32L29 21" stroke="#ED638E" strokeWidth="2" strokeLinecap="round" />
-    <Circle cx="26" cy="29" r="5" fill="#FFF5D9" />
-    <Path d="M34 27Q43 15 53 25L60 20L59 33L53 29Q44 39 34 27Z" fill="#FFD15E" stroke="white" strokeWidth="2" strokeLinejoin="round" />
-    <Circle cx="41" cy="26" r="1.5" fill="#19477C" />
-    <Path d="M9 33H55L50 55Q32 62 14 55Z" fill="#49CEBD" stroke="white" strokeWidth="3" strokeLinejoin="round" />
-    <Path d="M22 39L24 52M32 39V54M42 39L40 52" stroke="#BAFFF0" strokeWidth="3" strokeLinecap="round" />
-    <Rect x="7" y="31" width="50" height="7" rx="3.5" fill="#96F2DD" stroke="white" strokeWidth="2" />
-    <Circle cx="55" cy="9" r="4" fill="#B4F6FF55" stroke="white" strokeWidth="2" />
+    <Defs><LinearGradient id={id} x1="0%" y1="0%" x2="0%" y2="100%"><Stop stopColor="#C8B5FF" /><Stop offset="1" stopColor="#9470EE" /></LinearGradient></Defs>
+    <Path d={shell} fill="white" stroke="white" strokeWidth="7" strokeLinejoin="round" />
+    <Path d={shell} fill={`url(#${id})`} stroke="#8056CF" strokeWidth="2.3" strokeLinejoin="round" />
+    <Path d="M18 24L23 46M28 20L29 47M39 20L36 47M48 25L42 46" stroke="#A17BE9" strokeWidth="3" strokeLinecap="round" />
+    <Path d="M17 29Q17 9 32 9Q47 9 47 29" fill="none" stroke="white" strokeWidth="9" strokeLinecap="round" />
+    <Path d="M17 29Q17 9 32 9Q47 9 47 29" fill="none" stroke="#FFD87D" strokeWidth="5" strokeLinecap="round" />
+    <Path d="M13 29Q32 34 51 29" fill="none" stroke="#FFF1C9" strokeWidth="6" strokeLinecap="round" />
+    <Ellipse cx="19" cy="39" rx="3" ry="4" fill="#EEDFFF" />
+    <Circle cx="26" cy="41" r="2.2" fill="#4E3985" /><Circle cx="39" cy="41" r="2.2" fill="#4E3985" />
+    <Ellipse cx="22" cy="46" rx="3.3" ry="2" fill="#FFB4DB" /><Ellipse cx="43" cy="46" rx="3.3" ry="2" fill="#FFB4DB" />
+    <Path d="M29 46Q32 50 36 46" fill="none" stroke="#61418F" strokeWidth="2" strokeLinecap="round" />
   </Svg>;
 }
