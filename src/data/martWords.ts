@@ -120,7 +120,11 @@ export function getWordRow(word: string): MartRowConfig {
   return row;
 }
 
+/** 테스트용: true면 코너·난이도 줄 잠금을 전부 풀어 둔다. 잠금 진행을 되살리려면 false로 바꾼다. */
+export const MART_UNLOCK_ALL = true;
+
 export function isRowUnlocked(cornerId: MartCornerId, tier: number, completed: ReadonlySet<string>): boolean {
+  if (MART_UNLOCK_ALL) return true;
   if (tier <= 1) return true;
   const previousRow = MART_CORNERS[cornerId].rows.find((row) => row.tier === tier - 1);
   if (!previousRow) return true;

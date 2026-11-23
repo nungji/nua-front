@@ -142,6 +142,22 @@ export function OceanNextButton({ onPress, disabled, accessibilityLabel = '다�
   );
 }
 
+/** 하단 큰 버튼 — 홈(돌아가기). 피그마 Mart/Button/Home (78x78, 주황 그라디언트, 집 아이콘). */
+export function OceanHomeButton({ onPress, disabled, accessibilityLabel = '돌아가기' }: SmallOceanButtonProps) {
+  return (
+    <OceanCircleButton originX={16} originY={6} boxSize={78} colors={ORANGE_GRADIENT} onPress={onPress} disabled={disabled} accessibilityLabel={accessibilityLabel}>
+      <Path
+        d="M41.5 43.5L55 31.5L68.5 43.5M44.5 42V57H65.5V42"
+        stroke="white"
+        strokeWidth={3}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </OceanCircleButton>
+  );
+}
+
 /** 하단 중앙 큰 버튼 — 다시 시도(재시도), 디자인에 없어서 화살표를 반대로 돌려 근사한다. */
 export function OceanRetryButton({ onPress, disabled, accessibilityLabel = '다시 시도' }: SmallOceanButtonProps) {
   return (

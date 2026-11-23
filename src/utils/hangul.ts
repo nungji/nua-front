@@ -51,7 +51,14 @@ export function vowelSitsBelow(jungJamo: string): boolean {
   return !RIGHT_SIDE_VOWELS.has(jungJamo);
 }
 
-const DISTRACTOR_POOL = [...CHOSEONG, ...JUNGSEONG, ...JONGSEONG.filter(Boolean)];
+const VOWEL_JAMO: ReadonlySet<string> = new Set(JUNGSEONG);
+
+/** 모음(중성) 자모인지. 아니면 자음(초성·받침)이다. */
+export function isVowelJamo(jamo: string): boolean {
+  return VOWEL_JAMO.has(jamo);
+}
+
+const DISTRACTOR_POOL =[...CHOSEONG, ...JUNGSEONG, ...JONGSEONG.filter(Boolean)];
 
 export function pickDistractorJamo(excluding: ReadonlySet<string>): string {
   const candidates = DISTRACTOR_POOL.filter((jamo) => !excluding.has(jamo));

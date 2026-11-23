@@ -8,7 +8,7 @@ interface MartImagePlaceholderProps {
 
 export function MartImagePlaceholder({ imageSrc, className }: MartImagePlaceholderProps) {
   if (imageSrc) {
-    return <Image source={imageSrc} className={className} resizeMode="cover" />;
+    return <Image source={imageSrc} className={className} resizeMode="contain" />;
   }
   return <View className={`bg-gray-300 ${className ?? ''}`} />;
 }

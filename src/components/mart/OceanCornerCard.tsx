@@ -2,6 +2,7 @@ import { Pressable, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 import type { MartCornerId } from '@/enums';
 import { OceanBigStar, OceanLockBadge } from './OceanDecor';
+import { FONT } from '@/theme';
 
 const CARD_GRADIENTS: Record<MartCornerId, [string, string]> = {
   grocery: ['#FFC24B', '#FF8A1F'],
@@ -224,7 +225,7 @@ export function OceanCornerCard({ cornerId, title, variant, status = 'unlocked',
               right: 0,
               textAlign: 'center',
               color: 'white',
-              fontWeight: '800',
+              fontFamily: FONT,
               fontSize: variant === 'full' ? 15 : 13,
               textShadowColor: 'rgba(0,0,0,0.25)',
               textShadowOffset: { width: 0, height: 1 },

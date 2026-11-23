@@ -9,9 +9,11 @@ type Props = {
   title: string;
   onBack?: () => void;
   right?: ReactNode;
+  /** 뒤로 버튼 옆에 붙는 요소(예: 게임 캐릭터). */
+  leading?: ReactNode;
 };
 
-export function TopBar({ title, onBack, right }: Props) {
+export function TopBar({ title, onBack, right, leading }: Props) {
   const { width, height } = useWindowDimensions();
   const scale = stageScale(width, height);
   const buttonSize = 48 * scale;
@@ -48,6 +50,7 @@ export function TopBar({ title, onBack, right }: Props) {
             </Svg>
           </Pressable>
         ) : null}
+        {leading}
       </View>
 
       <View

@@ -1,22 +1,44 @@
-import { Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 import type { ImageSourcePropType } from 'react-native';
-import { MartImagePlaceholder } from './MartImagePlaceholder';
+import { COLORS, FONT, SHADOW } from '@/theme';
 
 interface MartWordCardProps {
   label: string;
   imageSrc?: ImageSourcePropType;
   locked?: boolean;
+  /** 카드 너비(px). 높이는 너비에 맞춰 정해진다. */
+  size?: number;
 }
 
-export function MartWordCard({ label, imageSrc, locked }: MartWordCardProps) {
+export function MartWordCard({ label, imageSrc, locked, size = 104 }: MartWordCardProps) {
+  const imageSize = size * 0.72;
+
   return (
     <View
-      className={`w-[104px] h-[130px] rounded-2xl overflow-hidden bg-white border-2 border-gray-200 ${
-        locked ? 'opacity-30' : ''
-      }`}
+      style={[
+        SHADOW.card,
+        {
+          width: size,
+          height: size * 1.25,
+          borderRadius: size * 0.2,
+          backgroundColor: COLORS.white,
+          borderWidth: 3,
+          borderColor: COLORS.foam,
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: locked ? 0.35 : 1,
+        },
+      ]}
     >
-      <MartImagePlaceholder imageSrc={imageSrc} className="flex-1" />
-      <Text className="text-center py-1 font-bold">{locked ? '?' : label}</Text>
+      {imageSrc ? (
+        // 이미지 크기를 명시하지 않으면 원본 크기로 그려져 카드 밖으로 잘린다.
+        <Image source={imageSrc} resizeMode="contain" style={{ width: imageSize, height: imageSize }} />
+      ) : (
+        <View style={{ width: imageSize, height: imageSize, borderRadius: 12, backgroundColor: '#D7E3F2' }} />
+      )}
+      <Text numberOfLines={1} style={{ fontFamily: FONT, fontSize: size * 0.16, color: '#1B3A6B', marginTop: size * 0.04 }}>
+        {locked ? '?' : label}
+      </Text>
     </View>
   );
 }

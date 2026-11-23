@@ -9,6 +9,7 @@ import { OceanTopBar } from '@/components/mart/OceanTopBar';
 import { getWordCorner, MART_CORNERS } from '@/data/martWords';
 import { MART_CORNER_ORDER } from '@/enums';
 import { useMartStore } from '@/store/useMartStore';
+import { FONT } from '@/theme';
 
 const NUA_MASCOT = require('../../../assets/characters/mart.png');
 
@@ -31,7 +32,7 @@ export default function MartCornerClear() {
             <OceanBigStar size={44} />
           </View>
 
-          <Text style={{ fontSize: 20, fontWeight: '800', color: '#1B3A6B', textAlign: 'center' }}>
+          <Text style={{ fontSize: 20, fontFamily: FONT, color: '#1B3A6B', textAlign: 'center' }}>
             {corner ? `${corner.title} 코너 완료!` : '코너 완료!'}
           </Text>
 
@@ -63,7 +64,7 @@ export default function MartCornerClear() {
               >
                 <View style={{ width: 28, height: 24, borderRadius: 8, backgroundColor: '#FF9CC5' }} />
               </View>
-              <Text style={{ flex: 1, color: 'white', fontWeight: '800', fontSize: 15 }}>
+              <Text style={{ flex: 1, color: 'white', fontFamily: FONT, fontSize: 15 }}>
                 다음 코너 {nextCorner.title}이(가) 열렸어요!
               </Text>
               <View
@@ -93,5 +94,5 @@ export default function MartCornerClear() {
 }
 
 function MartCheckGlyph() {
-  return <Text style={{ color: 'white', fontWeight: '900', fontSize: 16 }}>✓</Text>;
+  return <Text style={{ color: 'white', fontFamily: FONT, fontSize: 16 }}>✓</Text>;
 }
