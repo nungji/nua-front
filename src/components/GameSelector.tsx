@@ -6,7 +6,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { Game } from '@/games';
 import { CAROUSEL_SPRING, stageScale } from '@/stage';
-import { COLORS, FONT, SHADOW, TEXT_SHADOW } from '@/theme';
+import { COLORS, FONT, SHADOW, TEXT_SHADOW, withAlpha } from '@/theme';
 
 /** Figma selector frame is 1280 x 832. */
 const DESIGN = {
@@ -56,9 +56,11 @@ function GameSlot({ game, position, count, slot, size, activeSize, gap, scale, o
         style={[
           styles.circle,
           SHADOW.card,
-          { backgroundColor: game.accent, borderWidth: 6 * scale }
+          { backgroundColor: withAlpha(game.accent, 0.16), borderWidth: 3 * scale }
         ]}
       >
+        <View pointerEvents="none" style={{ position: 'absolute', inset: 5 * scale, borderRadius: 9999, borderWidth: scale, borderColor: '#FFFFFF40' }} />
+        <View pointerEvents="none" style={{ position: 'absolute', left: size * 0.18, top: size * 0.12, width: size * 0.35, height: size * 0.10, borderRadius: 9999, backgroundColor: '#FFFFFF80', transform: [{ rotate: '-30deg' }] }} />
         {Icon ? (
           <Icon width={size * 0.55} height={size * 0.55} />
         ) : (
@@ -165,7 +167,7 @@ const styles = {
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     borderRadius: 9999,
-    borderColor: COLORS.white
+    borderColor: '#FFFFFFB3'
   },
   label: {
     position: 'absolute' as const,

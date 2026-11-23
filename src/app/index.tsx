@@ -24,7 +24,7 @@ export default function SelectorScreen() {
       </SafeAreaView>
 
       <View pointerEvents="none" style={{ position: 'absolute', left: 20 * scale, top: 16 * scale }}>
-        <Text style={[styles.wordmark, TEXT_SHADOW, { fontSize: 60 * scale }]}>바다 탐험대</Text>
+        <Image source={require('../assets/shellstore/logo.png')} accessibilityLabel="nua" resizeMode="contain" style={{ width: 270 * scale, height: 115 * scale }} />
         <Text style={[styles.subtitle, TEXT_SHADOW, { fontSize: 26 * scale }]}>게임 선택</Text>
       </View>
 
@@ -49,10 +49,6 @@ export default function SelectorScreen() {
 }
 
 const styles = {
-  wordmark: {
-    fontFamily: FONT,
-    color: COLORS.white
-  },
   subtitle: {
     fontFamily: FONT,
     marginTop: 2,
