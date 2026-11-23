@@ -21,7 +21,7 @@ export type Point = {
   y: number;
 };
 
-export type PieceShape = 'rect' | 'circle' | 'semicircle';
+export type PieceShape = 'rect' | 'circle' | 'semicircle' | 'dome';
 
 export type PartSpec = {
   color?: string;

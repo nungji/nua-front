@@ -2,7 +2,7 @@ import { OCEAN_SHAPES } from './oceanShapes';
 import { Chamfers } from './types';
 
 export type ShapeSpec = {
-  kind: 'rect' | 'circle' | 'semicircle';
+  kind: 'rect' | 'circle' | 'semicircle' | 'dome';
   width: number;
   height: number;
   chamfers?: Chamfers;
@@ -174,7 +174,7 @@ export function symmetryOf(shape: ShapeSpec): Symmetry {
     return { rotation: 4, mirror: true };
   }
 
-  if (shape.kind === 'semicircle') {
+  if (shape.kind === 'semicircle' || shape.kind === 'dome') {
     return { rotation: 1, mirror: true };
   }
 

@@ -1,3 +1,4 @@
+import { OceanPieceDetail } from '@/games/repairman/OceanPieceDetail';
 import { useId } from 'react';
 import { Circle, ClipPath, Defs, Ellipse, G, LinearGradient, Path, Stop, Svg } from 'react-native-svg';
 
@@ -66,6 +67,7 @@ export function PieceGraphic({
 
           {/* gloss band, clipped so it never spills past the outline */}
           <G clipPath={`url(#${clipId})`}>
+            <OceanPieceDetail piece={piece} />
             {piece.id.startsWith('ocean') && piece.id.endsWith('_shell') && piece.shape === 'semicircle' ?
               <G stroke="rgba(167, 43, 91, 0.3)" strokeWidth={3}>
                 {[0.15, 0.35, 0.65, 0.85].map(x => <Path key={x} d={`M${piece.width * x} 2 L${piece.width * 0.5} ${piece.height * 0.94}`} />)}
