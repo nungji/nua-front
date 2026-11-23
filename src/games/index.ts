@@ -14,7 +14,7 @@ export const GAMES: readonly Game[] = [
   { id: 'repairman', title: '수리공', accent: '#F05A28', route: '/games/repairman', Scene: RepairmanScene, icon: RepairmanIcon },
   { id: 'mart', title: '마트', accent: '#FB923C', route: '/games/mart', Scene: MartScene, icon: MartIcon },
   { id: 'fruitstore', title: '조개 상점', accent: '#2D8CF0', route: '/games/fruitstore', Scene: FruitStoreScene, icon: ShellIcon },
-  { id: 'daiso', title: '만물상', accent: '#78B997', route: '/games/daiso', Scene: DaisoScene, icon: DaisoIcon }
+  { id: 'daiso', title: '만물상', accent: '#A17EE8', route: '/games/daiso', Scene: DaisoScene, icon: DaisoIcon }
 
 ];
 

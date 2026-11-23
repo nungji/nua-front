@@ -13,3 +13,7 @@ Assets downloaded unchanged through Figma design context, 2026-11-23.
 | item-shelf.png | 395:3166 | In-game shelf (366:46) |
 
 ResultArt.tsx supplies new code-native vector panels for the missing bucket/sock outcome comics, as authorized by the user. No screenshots are used as application assets. Future stages are explicitly unavailable.
+
+## Ocean redesign
+
+The user subsequently requested the shared ocean style and original nua shark throughout the game. The Figma PNG/SVG files above are retained as source references only; they are no longer rendered. `OceanStoryPanel` now composes the existing ocean background and original shell-game shark with code-native sea scenery. The home selector uses the newly user-supplied `characters/daiso.png` unchanged.
