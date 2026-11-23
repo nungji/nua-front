@@ -1,7 +1,7 @@
 import { GameCharacter } from '@/components/GameCharacter';
 import { CompletedModel } from './CompletedModel';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, Text, useWindowDimensions, View } from 'react-native';
+import { Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS, useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,7 +9,7 @@ import { Path, Svg } from 'react-native-svg';
 
 import { GamePiece } from '@/components/GamePiece';
 import { StageBackdrop } from '@/components/StageBackdrop';
-import { TopBar } from '@/components/TopBar';
+import { WorkshopHeader, WorkshopWater } from './WorkshopDecor';
 import { PieceGraphic } from '@/components/PieceGraphic';
 import { pickPiece } from '@/games/repairman/game/hit';
 import {
@@ -28,9 +28,9 @@ import { buildPuzzle, findStage, PIECE_PAD, puzzleScale, SNAP_RADIUS, tiltFor } 
 import { Piece } from '@/games/repairman/game/types';
 import { useRepairmanStore } from '@/store/useRepairmanStore';
 import { stageScale } from '@/stage';
-import { COLORS, FONT, SHADOW, TOP_BAR_HEIGHT } from '@/theme';
+import { COLORS, FONT } from '@/theme';
 
-import { ReefCorners } from './OceanDecor';
+
 
 const FIXED_STEP = 16.666;
 const FLIP_HOLD = 200;
@@ -51,8 +51,8 @@ function PlayRound({ stageId, onExit, onRestart }: PlayScreenProps & { onRestart
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const scale = stageScale(windowWidth, windowHeight);
   const size = useMemo(() => {
-    const width = Math.round(Math.max(320, windowWidth - 32 * scale));
-    const height = Math.round(Math.max(220, windowHeight - (TOP_BAR_HEIGHT + 104) * scale));
+    const width = Math.round(Math.max(320, Math.min(windowWidth - 32 * scale, Math.max(620 * scale, windowWidth * .68))));
+    const height = Math.round(Math.max(220, windowHeight - 260 * scale));
     return { width, height };
   }, [windowWidth, windowHeight, scale]);
 
@@ -383,21 +383,12 @@ function PlayRound({ stageId, onExit, onRestart }: PlayScreenProps & { onRestart
 
   return (
     <View className="flex-1" style={{ backgroundColor: COLORS.oceanDeep }}>
-      <StageBackdrop dim={0.06} />
+      <StageBackdrop />
+      <WorkshopWater height={windowHeight} />
+      <View pointerEvents="none" style={{ position: 'absolute', left: 8 * scale, bottom: 24 * scale }}><GameCharacter game="repairman" width={Math.min(windowWidth * .19, 270 * scale)} height={340 * scale} /></View>
 
       <SafeAreaView className="flex-1" edges={['top', 'bottom']}>
-        <TopBar
-          title={`${stage.id}. ${puzzle.stageName}`}
-          onBack={onExit}
-          right={
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 * scale }}>
-            <GameCharacter game="repairman" width={72 * scale} height={72 * scale} />
-            <Pressable onPress={() => { reset(); onRestart(); }} hitSlop={8} accessibilityRole="button" accessibilityLabel="다시" style={styles.resetButton}>
-              <Text style={styles.resetText}>다시</Text>
-            </Pressable>
-            </View>
-          }
-        />
+        <WorkshopHeader title={`${stage.id}. ${puzzle.stageName}`} scale={scale} onExit={onExit} onReset={() => { reset(); onRestart(); }} />
 
       <View className="flex-1 items-center justify-center" style={{ flexDirection: 'row', gap: 16 * scale, paddingHorizontal: 16 * scale }}>
         <GestureDetector gesture={gesture}>
@@ -407,24 +398,24 @@ function PlayRound({ stageId, onExit, onRestart }: PlayScreenProps & { onRestart
             style={{
               width: size.width,
               height: size.height,
-              borderWidth: completed ? 4 : 0,
-              borderColor: '#FFE093',
-              backgroundColor: '#DDF8FA',
-              boxShadow: '0 6px 0 #238DAA, 0 0 0 4px #FFFFFFB3'
+              borderRadius: 48 * scale,
+              backgroundColor: '#DDF8FAF5',
+              boxShadow: `0 ${10 * scale}px 0 #0087DB, 0 0 0 ${8 * scale}px ${completed ? '#FFE093' : '#F3FFFF'}`
             }}
           >
-            <ReefCorners />
+            <View pointerEvents="none" style={{ position: 'absolute', left: '50%', top: 22, bottom: 22, width: 2, backgroundColor: '#91CDEB80' }} />
+            <View pointerEvents="none" style={{ position: 'absolute', left: 18, top: 15, width: 48 * scale, height: 16 * scale, borderRadius: 12, backgroundColor: '#FFFFFFC0', transform: [{ rotate: '-35deg' }] }} />
             <View testID="repairman-model" pointerEvents="none" style={{ position: 'absolute', left: 12, top: 12, width: size.width * .47, height: size.height * .6, alignItems: 'center', zIndex: 1 }}>
               <Text style={{ fontFamily: FONT, color: '#23748F', fontSize: Math.max(13, 20 * scale) }}>이렇게 만들어요</Text>
               <CompletedModel pieces={pieces} width={size.width * .44} height={size.height * .48} />
             </View>
-            <View pointerEvents="none" style={{ position: 'absolute', left: 10, top: 10, width: size.width * .48 - 10, bottom: 12, borderRadius: 20, backgroundColor: '#FFF4D8' }}>
+            <View pointerEvents="none" style={{ position: 'absolute', left: 10, top: 10, width: size.width * .48 - 10, bottom: 12, borderRadius: 20, backgroundColor: 'transparent' }}>
               <Text style={{ fontFamily: FONT, color: '#A77A50', textAlign: 'center', marginTop: size.height * .64, fontSize: 18 * scale }}>조각을 골라요</Text>
             </View>
             {/* assembly pad — the silhouette target sits on top of the workbench */}
             <View
               pointerEvents="none"
-              style={[styles.zone, { left: size.width * 0.5 + 6, right: 10, top: 10, bottom: 12, backgroundColor: 'rgba(179, 231, 236, 0.65)' }]}
+              style={[styles.zone, { left: size.width * 0.5 + 6, right: 10, top: 10, bottom: 12, backgroundColor: 'transparent', borderWidth: 0 }]}
             />
 
             {puzzle.slots
@@ -462,7 +453,7 @@ function PlayRound({ stageId, onExit, onRestart }: PlayScreenProps & { onRestart
                 top: puzzle.pedestal.y,
                 width: puzzle.pedestal.width,
                 height: puzzle.pedestal.height,
-                backgroundColor: '#F6D39C'
+                backgroundColor: '#B5DFF080'
               }}
               className="rounded-md"
             />
@@ -487,14 +478,14 @@ function PlayRound({ stageId, onExit, onRestart }: PlayScreenProps & { onRestart
         </GestureDetector>
       </View>
 
-      <View className="items-center pb-5">
-        <Text style={{ color: '#175E80', fontFamily: FONT, fontSize: Math.max(12, 16 * scale) }}>
+      <View className="items-center" style={{ height: 108 * scale, paddingTop: 14 * scale }}>
+        <Text style={{ color: '#163F83', fontFamily: FONT, fontSize: Math.max(12, 21 * scale), backgroundColor: '#FFF6DB', borderRadius: 28 * scale, paddingHorizontal: 32 * scale, paddingVertical: 8 * scale, overflow: 'hidden', boxShadow: '0 4px 0 #0088D8' }}>
           놓은 조각 {placedCount}/{pieces.length} · 시도 {snaps + misses}
         </Text>
         {completed ? (
           <Text className="mt-1" style={{ color: '#FFE18A', fontFamily: FONT, fontSize: Math.max(20, 30 * scale) }}>완성!</Text>
         ) : (
-          <Text className="mt-1" style={{ color: '#246D87', fontFamily: FONT, fontSize: Math.max(12, 16 * scale) }}>
+          <Text className="mt-1" style={{ color: '#FFFFFF', fontFamily: FONT, fontSize: Math.max(12, 19 * scale) }}>
             {stage.rotate && stage.flip
               ? '탭=돌리기 · 200ms 누르면 뒤집기'
               : stage.rotate
@@ -565,20 +556,4 @@ const styles = {
     borderWidth: 3,
     borderColor: 'rgba(255, 255, 255, 0.85)'
   },
-  resetButton: {
-    height: 44,
-    paddingHorizontal: 18,
-    borderRadius: 22,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    backgroundColor: COLORS.white,
-    borderWidth: 4,
-    borderColor: '#7FE6E4',
-    ...SHADOW.button
-  },
-  resetText: {
-    fontFamily: FONT,
-    fontSize: 18,
-    color: '#168AA7'
-  }
 };
