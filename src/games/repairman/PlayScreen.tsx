@@ -1,3 +1,4 @@
+import { CompletedModel } from './CompletedModel';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Pressable, Text, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -391,9 +392,15 @@ export function PlayScreen({ stageId, onExit }: PlayScreenProps) {
           }
         />
 
-      <View className="flex-1 items-center justify-center">
+      <View className="flex-1 items-center justify-center" style={{ flexDirection: 'row', gap: 16 * scale }}>
+        <View testID="repairman-model" style={{ width: size.width * 0.32, height: size.height, backgroundColor: '#E8FDFF', borderRadius: 24, boxShadow: '0 0 0 3px #FFFFFFBB', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontFamily: FONT, color: '#23748F', fontSize: Math.max(13, 20 * scale) }}>이렇게 만들어요</Text>
+          <CompletedModel pieces={pieces} width={size.width * 0.32} height={size.height * 0.7} />
+          <Text style={{ fontFamily: FONT, color: '#23748F', fontSize: Math.max(12, 16 * scale) }}>{puzzle.stageName}</Text>
+        </View>
         <GestureDetector gesture={gesture}>
           <View
+            testID="repairman-workbench"
             className="overflow-hidden rounded-3xl"
             style={{
               width: size.width,

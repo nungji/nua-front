@@ -24,6 +24,7 @@ export type Point = {
 export type PieceShape = 'rect' | 'circle' | 'semicircle';
 
 export type PartSpec = {
+  color?: string;
   id: string;
   shape: ShapeId;
   slot: Point;

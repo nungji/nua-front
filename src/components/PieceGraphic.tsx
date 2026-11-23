@@ -1,4 +1,5 @@
-import { ClipPath, Defs, Ellipse, G, LinearGradient, Path, Stop, Svg } from 'react-native-svg';
+import { useId } from 'react';
+import { Circle, ClipPath, Defs, Ellipse, G, LinearGradient, Path, Stop, Svg } from 'react-native-svg';
 
 import { piecePath } from '@/games/repairman/game/shapes';
 import { PIECE_PAD } from '@/games/repairman/game/stages';
@@ -25,13 +26,14 @@ export function PieceGraphic({
   stroke,
   strokeWidth,
   opacity,
-  plain = false
+  plain = fill === 'none'
 }: PieceGraphicProps) {
+  const instanceId = useId();
   const width = piece.width + PIECE_PAD * 2;
   const height = piece.height + PIECE_PAD * 2;
   const path = piecePath(piece, edges);
-  const gradientId = `piece-grad-${piece.id}`;
-  const clipId = `piece-clip-${piece.id}`;
+  const gradientId = `piece-grad-${instanceId}`;
+  const clipId = `piece-clip-${instanceId}`;
 
   return (
     <Svg
@@ -64,6 +66,13 @@ export function PieceGraphic({
 
           {/* gloss band, clipped so it never spills past the outline */}
           <G clipPath={`url(#${clipId})`}>
+            {piece.id.startsWith('ocean') && piece.id.endsWith('_shell') && piece.shape === 'semicircle' ?
+              <G stroke="rgba(167, 43, 91, 0.3)" strokeWidth={3}>
+                {[0.15, 0.35, 0.65, 0.85].map(x => <Path key={x} d={`M${piece.width * x} 2 L${piece.width * 0.5} ${piece.height * 0.94}`} />)}
+              </G> : null}
+            {piece.id.startsWith('ocean') && /_eye\d*$/.test(piece.id) ?
+              <Circle cx={piece.width * 0.5} cy={piece.height * 0.5} r={piece.width * 0.24} fill="#174563" /> : null}
+
             <Ellipse
               cx={piece.width * 0.34}
               cy={piece.height * 0.2}
